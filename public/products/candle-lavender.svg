@@ -1,0 +1,23 @@
+<svg width="900" height="700" viewBox="0 0 900 700" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="900" y2="700" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#EFE9FA"/>
+      <stop offset="1" stop-color="#D9CAE7"/>
+    </linearGradient>
+    <linearGradient id="jar" x1="320" y1="240" x2="580" y2="560" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F9F7FF"/>
+      <stop offset="1" stop-color="#D7CCE8"/>
+    </linearGradient>
+  </defs>
+  <rect width="900" height="700" fill="url(#bg)"/>
+  <ellipse cx="450" cy="586" rx="220" ry="32" fill="#B8A3C8" opacity="0.4"/>
+  <rect x="320" y="220" width="260" height="320" rx="28" fill="url(#jar)" stroke="#C5B2D8" stroke-width="4"/>
+  <rect x="338" y="260" width="224" height="240" rx="18" fill="#F4EFFC"/>
+  <path d="M450 118C422 158 412 180 412 203C412 231 429 252 450 252C471 252 488 231 488 203C488 180 478 158 450 118Z" fill="#E5B675"/>
+  <path d="M450 140C434 160 427 177 427 196C427 214 437 228 450 228C463 228 473 214 473 196C473 177 466 160 450 140Z" fill="#FFE7BF"/>
+  <line x1="395" y1="485" x2="352" y2="540" stroke="#7D5FA2" stroke-width="5"/>
+  <line x1="430" y1="490" x2="390" y2="548" stroke="#7D5FA2" stroke-width="5"/>
+  <line x1="465" y1="490" x2="430" y2="552" stroke="#7D5FA2" stroke-width="5"/>
+  <line x1="500" y1="485" x2="470" y2="544" stroke="#7D5FA2" stroke-width="5"/>
+  <text x="450" y="642" text-anchor="middle" fill="#6B4E8E" font-size="46" font-family="Georgia, serif">Lavender Dream Jar</text>
+</svg>

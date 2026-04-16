@@ -1,0 +1,20 @@
+<svg width="900" height="700" viewBox="0 0 900 700" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="900" y2="700" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F6E8D8"/>
+      <stop offset="1" stop-color="#D5B89A"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="318" y1="240" x2="582" y2="560" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F5EDE3"/>
+      <stop offset="1" stop-color="#B5936F"/>
+    </linearGradient>
+  </defs>
+  <rect width="900" height="700" fill="url(#bg)"/>
+  <ellipse cx="450" cy="585" rx="240" ry="34" fill="#9D7651" opacity="0.35"/>
+  <rect x="318" y="228" width="264" height="320" rx="26" fill="url(#glass)" stroke="#8E6B47" stroke-width="5"/>
+  <rect x="350" y="270" width="200" height="230" rx="14" fill="#EEDFCF"/>
+  <path d="M450 112C422 154 411 178 411 203C411 232 429 255 450 255C471 255 489 232 489 203C489 178 478 154 450 112Z" fill="#DBAA66"/>
+  <path d="M450 136C433 158 426 177 426 198C426 216 437 231 450 231C463 231 474 216 474 198C474 177 467 158 450 136Z" fill="#FFE9C2"/>
+  <rect x="370" y="295" width="160" height="20" rx="10" fill="#B48658"/>
+  <text x="450" y="642" text-anchor="middle" fill="#7E5733" font-size="46" font-family="Georgia, serif">Vanilla Oud Luxe</text>
+</svg>

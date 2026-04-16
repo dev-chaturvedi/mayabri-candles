@@ -1,0 +1,35 @@
+@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;700&family=Manrope:wght@400;600;700&display=swap");
+
+:root {
+  --ink-900: #2f1f13;
+  --ink-700: #644b3a;
+  --accent-800: #6d3b1e;
+  --accent-700: #8d4f28;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  font-family: "Manrope", "Segoe UI", sans-serif;
+  color: var(--ink-900);
+  background: #f9efe0;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  margin: 0;
+  font-family: "Cormorant Garamond", Georgia, serif;
+}
+
+p {
+  margin: 0;
+}

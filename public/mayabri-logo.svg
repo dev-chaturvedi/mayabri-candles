@@ -1,0 +1,19 @@
+<svg width="240" height="240" viewBox="0 0 240 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="40" y1="20" x2="200" y2="220" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F2C188" />
+      <stop offset="1" stop-color="#8F4F27" />
+    </linearGradient>
+    <linearGradient id="wax" x1="80" y1="70" x2="160" y2="190" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFF6E7" />
+      <stop offset="1" stop-color="#EBD6BB" />
+    </linearGradient>
+  </defs>
+  <rect x="16" y="16" width="208" height="208" rx="52" fill="url(#bg)" />
+  <rect x="78" y="86" width="84" height="96" rx="20" fill="url(#wax)" />
+  <ellipse cx="120" cy="84" rx="27" ry="10" fill="#FDF4E6" />
+  <path d="M120 45C111 55 108 62 108 69C108 76 113 82 120 82C127 82 132 76 132 69C132 62 129 55 120 45Z" fill="#FFC97C" />
+  <path d="M120 53C114 60 112 65 112 69C112 74 115 78 120 78C125 78 128 74 128 69C128 65 126 60 120 53Z" fill="#FFE8B8" />
+  <path d="M66 194H174" stroke="#F9E6D0" stroke-width="7" stroke-linecap="round" />
+  <text x="120" y="214" text-anchor="middle" fill="#FDF3E6" font-size="19" font-family="Georgia, serif" font-weight="700">MAYABRI</text>
+</svg>

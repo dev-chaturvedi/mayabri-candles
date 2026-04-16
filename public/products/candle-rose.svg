@@ -1,0 +1,22 @@
+<svg width="900" height="700" viewBox="0 0 900 700" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="900" y2="700" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FCEFE8"/>
+      <stop offset="1" stop-color="#F4D8CB"/>
+    </linearGradient>
+    <linearGradient id="wax" x1="350" y1="220" x2="550" y2="560" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFF7EF"/>
+      <stop offset="1" stop-color="#F0D7C8"/>
+    </linearGradient>
+  </defs>
+  <rect width="900" height="700" fill="url(#bg)"/>
+  <ellipse cx="450" cy="580" rx="220" ry="34" fill="#DFB8A2" opacity="0.45"/>
+  <rect x="330" y="240" width="240" height="300" rx="34" fill="url(#wax)"/>
+  <ellipse cx="450" cy="240" rx="120" ry="28" fill="#FFF9F2"/>
+  <path d="M450 130C422 170 412 192 412 216C412 245 429 266 450 266C471 266 488 245 488 216C488 192 478 170 450 130Z" fill="#F5BE70"/>
+  <path d="M450 152C433 174 426 191 426 210C426 229 437 244 450 244C463 244 474 229 474 210C474 191 467 174 450 152Z" fill="#FFE7BA"/>
+  <circle cx="380" cy="352" r="18" fill="#E7A2A9"/>
+  <circle cx="512" cy="368" r="16" fill="#DA8B93"/>
+  <circle cx="458" cy="402" r="20" fill="#E19AA0"/>
+  <text x="450" y="642" text-anchor="middle" fill="#9A5D46" font-size="46" font-family="Georgia, serif">Rose Bloom Candle</text>
+</svg>

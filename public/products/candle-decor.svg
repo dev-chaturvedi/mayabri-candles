@@ -1,0 +1,19 @@
+<svg width="900" height="700" viewBox="0 0 900 700" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="900" y2="700" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F7EFE3"/>
+      <stop offset="1" stop-color="#E4D1BB"/>
+    </linearGradient>
+  </defs>
+  <rect width="900" height="700" fill="url(#bg)"/>
+  <ellipse cx="450" cy="590" rx="260" ry="32" fill="#B88F69" opacity="0.38"/>
+  <rect x="240" y="300" width="140" height="240" rx="18" fill="#F2E4D3" stroke="#D1B594" stroke-width="4"/>
+  <ellipse cx="310" cy="300" rx="70" ry="18" fill="#FFF8EE"/>
+  <path d="M310 190C289 220 282 238 282 256C282 278 295 296 310 296C325 296 338 278 338 256C338 238 331 220 310 190Z" fill="#E1B06D"/>
+  <path d="M310 208C297 226 292 239 292 254C292 268 300 279 310 279C320 279 328 268 328 254C328 239 323 226 310 208Z" fill="#FFE8BD"/>
+  <rect x="430" y="250" width="230" height="290" rx="28" fill="#F1E0CC" stroke="#CDAE8B" stroke-width="4"/>
+  <ellipse cx="545" cy="250" rx="115" ry="26" fill="#FFF8EE"/>
+  <path d="M545 140C519 176 510 197 510 220C510 247 526 268 545 268C564 268 580 247 580 220C580 197 571 176 545 140Z" fill="#E7B371"/>
+  <path d="M545 160C529 181 522 197 522 216C522 233 532 247 545 247C558 247 568 233 568 216C568 197 561 181 545 160Z" fill="#FFEBC4"/>
+  <text x="450" y="642" text-anchor="middle" fill="#8C6440" font-size="46" font-family="Georgia, serif">Decor Collection</text>
+</svg>
