@@ -3,16 +3,18 @@ const cors = require("cors");
 const dotenv = require("dotenv");
 const mongoose = require("mongoose");
 
+dotenv.config();
+
 const authRoutes = require("./src/routes/auth");
 const productRoutes = require("./src/routes/products");
+const uploadRoutes = require("./src/routes/upload");
 const { router: checkoutRoutes, handleStripeWebhook } = require("./src/routes/checkout");
+const paymentRoutes = require("./src/routes/payment");
 const inquiryRoutes = require("./src/routes/inquiries");
 const User = require("./src/models/User");
 const Product = require("./src/models/Product");
 const seedProducts = require("./src/data/products");
 const { SUPER_USER_EMAILS } = require("./src/config/superUsers");
-
-dotenv.config();
 
 const app = express();
 const PORT = process.env.API_PORT || 5000;
@@ -36,7 +38,9 @@ app.get("/api/health", (_req, res) => {
 
 app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
+app.use("/api/upload", uploadRoutes);
 app.use("/api/checkout", checkoutRoutes);
+app.use("/api/payment", paymentRoutes);
 app.use("/api/inquiries", inquiryRoutes);
 
 app.use((err, _req, res, _next) => {

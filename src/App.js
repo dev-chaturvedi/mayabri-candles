@@ -1,6 +1,13 @@
-import { useDeferredValue, useEffect, useState, startTransition } from "react";
+import { useCallback, useDeferredValue, useEffect, useState, startTransition } from "react";
+import { LazyMotion, domAnimation, m, useReducedMotion } from "framer-motion";
 import "./App.css";
 import { api } from "./api";
+import HeroBanner from "./components/HeroBanner";
+import Navbar from "./components/Navbar";
+import ProductCard from "./components/ProductCard";
+import ProductGridSkeleton from "./components/ProductGridSkeleton";
+import ProductPage from "./components/ProductPage";
+import CartSection from "./components/CartSection";
 
 const TOKEN_KEY = "mayabri_token";
 const TESTIMONIALS = [
@@ -62,6 +69,7 @@ const DISCOUNT_CODES = {
 };
 
 const INSTAGRAM_REEL_URL = "https://www.instagram.com/reel/DXH3b4pk_K0/";
+const RAZORPAY_SCRIPT_URL = "https://checkout.razorpay.com/v1/checkout.js";
 
 const normalizePath = (path) => {
   if (!path || path === "/") {
@@ -144,6 +152,9 @@ const AROMATHERAPY_MENU_ITEMS = [
   { label: "Pure Essentials", meta: "Spa-inspired aroma notes", path: "/collections/pure-essentials" },
 ];
 
+const ADMIN_PRODUCT_CATEGORIES = ["Jar", "Decorative", "Gift", "Festival"];
+const FILTER_CATEGORIES = ["all", "Jar", "Decorative", "Gift", "Festival"];
+
 const getInitialCart = () => {
   try {
     return JSON.parse(localStorage.getItem("mayabri_cart")) || [];
@@ -152,11 +163,36 @@ const getInitialCart = () => {
   }
 };
 
+const loadRazorpayScript = () =>
+  new Promise((resolve) => {
+    if (window.Razorpay) {
+      resolve(true);
+      return;
+    }
+
+    const script = document.querySelector(`script[src="${RAZORPAY_SCRIPT_URL}"]`);
+    if (script) {
+      script.addEventListener("load", () => resolve(true), { once: true });
+      script.addEventListener("error", () => resolve(false), { once: true });
+      return;
+    }
+
+    const checkoutScript = document.createElement("script");
+    checkoutScript.src = RAZORPAY_SCRIPT_URL;
+    checkoutScript.async = true;
+    checkoutScript.onload = () => resolve(true);
+    checkoutScript.onerror = () => resolve(false);
+    document.body.appendChild(checkoutScript);
+  });
+
 function App() {
+  const shouldReduceMotion = useReducedMotion();
   const [products, setProducts] = useState([]);
   const [productsLoading, setProductsLoading] = useState(true);
   const [cart, setCart] = useState(getInitialCart);
   const [search, setSearch] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [selectedSort, setSelectedSort] = useState("");
   const deferredSearch = useDeferredValue(search);
   const [mode, setMode] = useState("login");
   const [authForm, setAuthForm] = useState({ name: "", email: "", password: "" });
@@ -165,6 +201,7 @@ function App() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(false);
+  const [paymentLoading, setPaymentLoading] = useState(false);
   const [newsletterEmail, setNewsletterEmail] = useState("");
   const [quickView, setQuickView] = useState(null);
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem("mayabri_theme") === "dark");
@@ -172,6 +209,7 @@ function App() {
   const [cursor, setCursor] = useState({ x: 0, y: 0 });
   const [parallaxY, setParallaxY] = useState(0);
   const [adminLoading, setAdminLoading] = useState(false);
+  const [adminImageUploading, setAdminImageUploading] = useState(false);
   const [adminForm, setAdminForm] = useState({
     name: "",
     description: "",
@@ -195,22 +233,47 @@ function App() {
     message: "",
   });
   const [corporateLoading, setCorporateLoading] = useState(false);
+  const hasCollectionPrefix = pathname.startsWith("/collections/");
+  const collectionSlug = hasCollectionPrefix
+    ? pathname.replace("/collections/", "")
+    : "";
+  const activeCollection = hasCollectionPrefix
+    ? COLLECTION_ROUTES[collectionSlug] || COLLECTION_ROUTES.candles
+    : null;
+  const isCollectionRoute = Boolean(activeCollection);
+  const isGiftingRoute = pathname === "/pages/corporate-gifting";
+  const productSlug = pathname.startsWith("/products/")
+    ? pathname.replace("/products/", "")
+    : "";
+  const isProductRoute = Boolean(productSlug);
+  const isHomeRoute = !isCollectionRoute && !isGiftingRoute && !isProductRoute;
 
-  const loadProducts = async () => {
+  const getProductQueryParams = useCallback(() => {
+    if (isProductRoute) {
+      return {};
+    }
+    return {
+      category: selectedCategory !== "all" ? selectedCategory : undefined,
+      sort: selectedSort || undefined,
+    };
+  }, [isProductRoute, selectedCategory, selectedSort]);
+
+  const loadProducts = useCallback(async (params) => {
+    const resolvedParams = params || getProductQueryParams();
     setProductsLoading(true);
     try {
-      const data = await api.getProducts();
+      const data = await api.getProducts(resolvedParams);
       setProducts(data);
     } catch (err) {
       setError(err.message);
     } finally {
       setProductsLoading(false);
     }
-  };
+  }, [getProductQueryParams]);
 
   useEffect(() => {
-    loadProducts();
-  }, []);
+    loadProducts(getProductQueryParams());
+  }, [getProductQueryParams, loadProducts, pathname]);
 
   useEffect(() => {
     if (!token) {
@@ -312,17 +375,6 @@ function App() {
     );
   });
 
-  const hasCollectionPrefix = pathname.startsWith("/collections/");
-  const collectionSlug = hasCollectionPrefix
-    ? pathname.replace("/collections/", "")
-    : "";
-  const activeCollection = hasCollectionPrefix
-    ? COLLECTION_ROUTES[collectionSlug] || COLLECTION_ROUTES.candles
-    : null;
-  const isCollectionRoute = Boolean(activeCollection);
-  const isGiftingRoute = pathname === "/pages/corporate-gifting";
-  const isHomeRoute = !isCollectionRoute && !isGiftingRoute;
-
   const visibleProducts = activeCollection
     ? filteredProducts.filter((product) =>
         activeCollection.categories.includes(product.category)
@@ -330,9 +382,20 @@ function App() {
     : filteredProducts;
 
   const giftingPreviewProducts = filteredProducts.filter((product) =>
-    ["Luxury", "Festive", "Decor"].includes(product.category)
+    ["Gift", "Festival", "Decorative", "Luxury", "Festive", "Decor"].includes(
+      product.category
+    )
   );
   const collectionHeroImage = visibleProducts[0]?.image || "/products/mayabri-real-1.jpeg";
+  const activeProduct = isProductRoute
+    ? products.find((product) => product.id === productSlug) || null
+    : null;
+  const relatedProducts = activeProduct
+    ? products.filter(
+        (product) =>
+          product.category === activeProduct.category && product.id !== activeProduct.id
+      )
+    : [];
 
   const categories = Object.entries(
     visibleProducts.reduce((acc, item) => {
@@ -349,20 +412,21 @@ function App() {
   const giftWrapFee = giftWrap ? 99 : 0;
   const payableTotal = discountedSubtotal + giftWrapFee;
 
-  const upsertCart = (product) => {
+  const upsertCart = (product, quantity = 1) => {
+    const normalizedQuantity = Math.max(1, Number(quantity) || 1);
     startTransition(() => {
       setCart((prev) => {
         const existing = prev.find((item) => item.id === product.id);
         if (existing) {
           return prev.map((item) =>
             item.id === product.id
-              ? { ...item, quantity: Number(item.quantity) + 1 }
+              ? { ...item, quantity: Number(item.quantity) + normalizedQuantity }
               : item
           );
         }
-        return [...prev, { ...product, quantity: 1 }];
+        return [...prev, { ...product, quantity: normalizedQuantity }];
       });
-      setNotice(`${product.name} added to cart.`);
+      setNotice(`${product.name} added to cart (${normalizedQuantity}).`);
     });
   };
 
@@ -373,6 +437,26 @@ function App() {
           item.id === id ? { ...item, quantity: Math.max(1, quantity) } : item
         )
         .filter((item) => item.quantity > 0)
+    );
+  };
+
+  const incrementQty = (id) => {
+    setCart((prev) =>
+      prev.map((item) =>
+        item.id === id
+          ? { ...item, quantity: Math.max(1, Number(item.quantity) + 1) }
+          : item
+      )
+    );
+  };
+
+  const decrementQty = (id) => {
+    setCart((prev) =>
+      prev.map((item) =>
+        item.id === id
+          ? { ...item, quantity: Math.max(1, Number(item.quantity) - 1) }
+          : item
+      )
     );
   };
 
@@ -472,22 +556,103 @@ function App() {
       return;
     }
 
-    setLoading(true);
+    setPaymentLoading(true);
     setError("");
+    setNotice("");
     try {
-      const data = await api.createCheckoutSession(
-        token,
-        cart.map((item) => ({ id: item.id, quantity: item.quantity })),
-        {
-          discountCode: appliedDiscountCode,
-          giftWrap,
-          giftMessage: giftMessage.trim(),
-        }
-      );
-      window.location.assign(data.url);
+      const scriptLoaded = await loadRazorpayScript();
+      if (!scriptLoaded || !window.Razorpay) {
+        throw new Error("Unable to load Razorpay checkout. Please check your network and retry.");
+      }
+
+      const orderResponse = await api.createPaymentOrder(token, {
+        amount: payableTotal,
+        currency: "INR",
+        items: cart.map((item) => ({ id: item.id, quantity: item.quantity })),
+        discountCode: appliedDiscountCode,
+        giftWrap,
+        giftMessage: giftMessage.trim(),
+      });
+
+      const razorpayKey = orderResponse.keyId || process.env.REACT_APP_RAZORPAY_KEY_ID;
+      if (!razorpayKey) {
+        throw new Error("Razorpay key is missing. Add REACT_APP_RAZORPAY_KEY_ID.");
+      }
+
+      const paymentResult = await new Promise((resolve, reject) => {
+        const checkout = new window.Razorpay({
+          key: razorpayKey,
+          amount: orderResponse.order.amount,
+          currency: orderResponse.order.currency,
+          name: "Mayabri Candles",
+          description: "Order checkout",
+          image: "/mayabri-logo.jpeg",
+          order_id: orderResponse.order.id,
+          prefill: {
+            name: user?.name || "",
+            email: user?.email || "",
+          },
+          theme: {
+            color: "#b45309",
+          },
+          handler: (response) => {
+            resolve(response);
+          },
+          modal: {
+            ondismiss: () => {
+              reject(new Error("Payment was cancelled. Your cart is still saved."));
+            },
+          },
+        });
+
+        checkout.on("payment.failed", (event) => {
+          reject(new Error(event.error?.description || "Payment failed. Please try again."));
+        });
+
+        checkout.open();
+      });
+
+      await api.verifyPayment(token, paymentResult);
+      setNotice("Payment successful. Thank you for your order.");
+      setCart([]);
+      setDiscountCode("");
+      setAppliedDiscountCode("");
+      setDiscountPercent(0);
+      setGiftWrap(false);
+      setGiftMessage("");
     } catch (checkoutError) {
       setError(checkoutError.message);
-      setLoading(false);
+    } finally {
+      setPaymentLoading(false);
+    }
+  };
+
+  const handleAdminImageUpload = async (event) => {
+    const selectedFile = event.target.files?.[0];
+
+    if (!selectedFile) {
+      return;
+    }
+
+    if (!token) {
+      setError("Please login as super user.");
+      return;
+    }
+
+    setAdminImageUploading(true);
+    setError("");
+    setNotice("");
+
+    try {
+      const data = await api.uploadProductImage(token, selectedFile);
+      setAdminForm((prev) => ({ ...prev, image: data.url }));
+      setNotice("Image uploaded successfully.");
+    } catch (uploadError) {
+      setError(uploadError.message);
+      setAdminForm((prev) => ({ ...prev, image: "" }));
+    } finally {
+      setAdminImageUploading(false);
+      event.target.value = "";
     }
   };
 
@@ -495,6 +660,21 @@ function App() {
     event.preventDefault();
     if (!token) {
       setError("Please login as super user.");
+      return;
+    }
+
+    if (adminImageUploading) {
+      setError("Please wait for image upload to complete.");
+      return;
+    }
+
+    if (!ADMIN_PRODUCT_CATEGORIES.includes(adminForm.category)) {
+      setError(`Category must be one of: ${ADMIN_PRODUCT_CATEGORIES.join(", ")}.`);
+      return;
+    }
+
+    if (!adminForm.image) {
+      setError("Please upload a product image before submitting.");
       return;
     }
 
@@ -587,95 +767,110 @@ function App() {
     navigateTo(nextPath);
   };
 
+  const handleOpenProduct = (productId) => {
+    navigateTo(`/products/${productId}`);
+  };
+
+  const handleBuyNow = (product, quantity = 1) => {
+    upsertCart(product, quantity);
+    window.location.hash = "shop";
+    window.requestAnimationFrame(() => {
+      const shopSection = document.getElementById("shop");
+      if (shopSection) {
+        shopSection.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    });
+  };
+
   const isCollectionMenuActive = (menuItems) =>
     menuItems.some((item) => normalizePath(item.path) === pathname);
 
+  const pageIntroMotion = shouldReduceMotion
+    ? {}
+    : {
+        initial: { opacity: 0, y: 14 },
+        animate: { opacity: 1, y: 0 },
+        transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] },
+      };
+
+  const heroSectionMotion = shouldReduceMotion
+    ? {}
+    : {
+        initial: { opacity: 0, y: 24 },
+        animate: { opacity: 1, y: 0 },
+        transition: { duration: 0.62, ease: [0.22, 1, 0.36, 1], delay: 0.14 },
+      };
+
+  const heroTextMotion = shouldReduceMotion
+    ? {}
+    : {
+        initial: { opacity: 0, y: 18 },
+        animate: { opacity: 1, y: 0 },
+        transition: { duration: 0.54, ease: [0.22, 1, 0.36, 1], delay: 0.22 },
+      };
+
+  const heroVisualMotion = shouldReduceMotion
+    ? {}
+    : {
+        initial: { opacity: 0, y: 20, scale: 0.98 },
+        animate: { opacity: 1, y: 0, scale: 1 },
+        transition: { duration: 0.58, ease: [0.22, 1, 0.36, 1], delay: 0.3 },
+      };
+
+  const productGridVariants = shouldReduceMotion
+    ? undefined
+    : {
+        hidden: { opacity: 0, y: 10 },
+        show: {
+          opacity: 1,
+          y: 0,
+          transition: {
+            duration: 0.36,
+            ease: [0.22, 1, 0.36, 1],
+            staggerChildren: 0.075,
+            delayChildren: 0.04,
+          },
+        },
+      };
+
+  const productCardVariants = shouldReduceMotion
+    ? undefined
+    : {
+        hidden: { opacity: 0, y: 18 },
+        show: {
+          opacity: 1,
+          y: 0,
+          transition: { duration: 0.42, ease: [0.22, 1, 0.36, 1] },
+        },
+      };
+
   return (
-    <main className={`app-shell ${darkMode ? "theme-dark" : ""} ${isGiftingRoute ? "gifting-theme" : ""}`}>
-      <div className="cursor-glow" style={{ left: cursor.x, top: cursor.y }} />
+    <LazyMotion features={domAnimation}>
+      <m.main
+        className={`app-shell overflow-x-hidden ${darkMode ? "theme-dark" : ""} ${isGiftingRoute ? "gifting-theme" : ""}`}
+        {...pageIntroMotion}
+      >
+        <div className="cursor-glow" style={{ left: cursor.x, top: cursor.y }} />
 
-      <header className="topbar reveal">
-        <a href="/" className="brand" onClick={(event) => handleRouteClick(event, "/")}>
-          <img src="/mayabri-logo.jpeg" alt="MayAbri Candles logo" />
-          <span>MayAbri Candles</span>
-        </a>
-        <nav className="main-nav">
-          <a
-            href="/"
-            className={`nav-link ${isHomeRoute ? "active" : ""}`}
-            onClick={(event) => handleRouteClick(event, "/")}
-          >
-            Home
-          </a>
-          <div className="menu-group">
-            <a
-              href="/collections/candles"
-              className={`nav-link ${isCollectionMenuActive(CANDLE_MENU_ITEMS) ? "active" : ""}`}
-              onClick={(event) => handleRouteClick(event, "/collections/candles")}
-            >
-              Candles
-            </a>
-            <div className="mega-menu" role="menu" aria-label="Candles collections">
-              {CANDLE_MENU_ITEMS.map((item) => (
-                <a
-                  key={item.path}
-                  href={item.path}
-                  className={`mega-link ${pathname === normalizePath(item.path) ? "active" : ""}`}
-                  onClick={(event) => handleRouteClick(event, item.path)}
-                >
-                  <span className="mega-label">{item.label}</span>
-                  <span className="mega-meta">{item.meta}</span>
-                </a>
-              ))}
-            </div>
-          </div>
-          <div className="menu-group">
-            <a
-              href="/collections/aromatherapy"
-              className={`nav-link ${isCollectionMenuActive(AROMATHERAPY_MENU_ITEMS) ? "active" : ""}`}
-              onClick={(event) => handleRouteClick(event, "/collections/aromatherapy")}
-            >
-              Aromatherapy
-            </a>
-            <div className="mega-menu" role="menu" aria-label="Aromatherapy collections">
-              {AROMATHERAPY_MENU_ITEMS.map((item) => (
-                <a
-                  key={item.path}
-                  href={item.path}
-                  className={`mega-link ${pathname === normalizePath(item.path) ? "active" : ""}`}
-                  onClick={(event) => handleRouteClick(event, item.path)}
-                >
-                  <span className="mega-label">{item.label}</span>
-                  <span className="mega-meta">{item.meta}</span>
-                </a>
-              ))}
-            </div>
-          </div>
-          <a
-            href="/pages/corporate-gifting"
-            className={`nav-link ${isGiftingRoute ? "active" : ""}`}
-            onClick={(event) => handleRouteClick(event, "/pages/corporate-gifting")}
-          >
-            Gifting
-          </a>
-          {user?.isSuperUser ? <a href="#admin" className="nav-link">Admin</a> : null}
-          <a href="#shop" className="nav-link">
-            Shop
-          </a>
-        </nav>
-        <div className="topbar-actions">
-          <button className="ghost" onClick={() => setDarkMode((prev) => !prev)}>
-            {darkMode ? "Light" : "Dark"}
-          </button>
-          <a href="#shop" className="cart-bubble">
-            Cart {cart.length}
-          </a>
-        </div>
-      </header>
+        <Navbar
+          pathname={pathname}
+          isHomeRoute={isHomeRoute}
+          isGiftingRoute={isGiftingRoute}
+          candleMenuItems={CANDLE_MENU_ITEMS}
+          aromatherapyMenuItems={AROMATHERAPY_MENU_ITEMS}
+          isCollectionMenuActive={isCollectionMenuActive}
+          userIsSuperUser={Boolean(user?.isSuperUser)}
+          cartCount={cart.length}
+          darkMode={darkMode}
+          onToggleTheme={() => setDarkMode((prev) => !prev)}
+          onNavigate={navigateTo}
+        />
 
-      {isHomeRoute ? (
-        <section className="hero reveal" id="hero">
-          <div className="hero-text">
+        {isHomeRoute ? <HeroBanner onRouteClick={handleRouteClick} /> : null}
+
+        {isHomeRoute ? (
+          <m.section className="hero !max-w-screen-xl mx-auto !px-4 sm:!px-6 md:!px-10" id="hero" {...heroSectionMotion}>
+            <m.div className="hero-text" {...heroTextMotion}>
             <p className="eyebrow">Luxury Candle Studio</p>
             <h1>Handcrafted candles for modern gifting and cozy homes</h1>
             <p className="hero-copy">
@@ -708,8 +903,8 @@ function App() {
                 YouTube Shorts
               </a>
             </div>
-          </div>
-          <div className="hero-candles" style={{ transform: `translateY(${parallaxY}px)` }}>
+            </m.div>
+            <m.div className="hero-candles" style={{ transform: `translateY(${parallaxY}px)` }} {...heroVisualMotion}>
             <div className="candle candle-lg">
               <span className="flame" />
             </div>
@@ -719,12 +914,12 @@ function App() {
             <div className="candle candle-sm">
               <span className="flame" />
             </div>
-          </div>
-        </section>
-      ) : null}
+            </m.div>
+          </m.section>
+        ) : null}
 
       {isCollectionRoute ? (
-        <section className="section reveal collection-hero">
+        <section className="section reveal !max-w-screen-xl mx-auto !px-4 sm:!px-6 md:!px-10 collection-hero">
           <div className="editorial-banner">
             <article className="editorial-copy">
               <p className="collection-crumb">Home / Collections / {activeCollection.title}</p>
@@ -740,7 +935,7 @@ function App() {
       ) : null}
 
       {isGiftingRoute ? (
-        <section className="section reveal gifting-hero">
+        <section className="section reveal !max-w-screen-xl mx-auto !px-4 sm:!px-6 md:!px-10 gifting-hero">
           <div className="editorial-banner">
             <article className="editorial-copy">
               <p className="eyebrow">Luxury Gifting</p>
@@ -766,90 +961,170 @@ function App() {
         </section>
       ) : null}
 
-      {!isGiftingRoute ? (
-        <section className="section reveal" id="featured">
-          <div className="section-head">
+      {isProductRoute ? (
+        activeProduct ? (
+          <ProductPage
+            product={activeProduct}
+            relatedProducts={relatedProducts}
+            isActionLoading={loading || productsLoading || adminLoading}
+            onAddToCart={upsertCart}
+            onBuyNow={handleBuyNow}
+            onOpenProduct={handleOpenProduct}
+          />
+        ) : (
+          <section className="section reveal !max-w-screen-xl mx-auto !px-4 sm:!px-6 md:!px-10">
+            {productsLoading ? (
+              <p className="loading-inline" role="status">
+                <span className="loading-spinner" aria-hidden="true" />
+                Loading product details...
+              </p>
+            ) : (
+              <>
+                <h2>Product Not Found</h2>
+                <p className="hero-copy">
+                  We could not find the requested product. Explore our latest collection instead.
+                </p>
+                <div className="hero-cta">
+                  <a
+                    href="/collections/candles"
+                    onClick={(event) => handleRouteClick(event, "/collections/candles")}
+                  >
+                    Browse Candles
+                  </a>
+                </div>
+              </>
+            )}
+          </section>
+        )
+      ) : null}
+
+      {!isGiftingRoute && !isProductRoute ? (
+        <m.section
+          className="section !max-w-screen-xl mx-auto !px-4 sm:!px-6 md:!px-10"
+          id="featured"
+        >
+          <div className="section-head gap-4">
             <div>
               <h2>{isCollectionRoute ? activeCollection.title : "Featured Candles"}</h2>
               {isCollectionRoute ? <p>{visibleProducts.length} products in this route</p> : null}
+              {productsLoading ? (
+                <p className="loading-inline" role="status">
+                  <span className="loading-spinner" aria-hidden="true" />
+                  Loading products...
+                </p>
+              ) : null}
             </div>
             <input
               type="search"
               placeholder="Search by name or category"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
+              className="w-full rounded-xl border border-amber-900/20 bg-white/80 px-4 py-3 text-base text-amber-900 outline-none ring-0 transition focus:border-amber-600 disabled:cursor-not-allowed disabled:opacity-70 sm:max-w-sm"
+              disabled={productsLoading}
             />
           </div>
-          <div className="product-grid">
-            {productsLoading ? (
-              Array.from({ length: 6 }).map((_, index) => (
-                <div key={index} className="skeleton-card">
-                  <div className="skeleton shimmer" />
-                  <div className="skeleton-line shimmer" />
-                  <div className="skeleton-line shimmer short" />
-                </div>
-              ))
-            ) : visibleProducts.length > 0 ? (
-              visibleProducts.map((product, index) => (
-                <div key={product.id} className="product-card" style={{ "--item-index": index }}>
-                  <img src={product.image} alt={product.name} loading="lazy" />
-                  <div>
-                    <p className="badge">{product.category}</p>
-                    <h3>{product.name}</h3>
-                    <p className="description">{product.description}</p>
-                    <p className="price">INR {product.price}</p>
-                    <div className="card-actions">
-                      <button className="ghost" onClick={() => setQuickView(product)}>
-                        Quick View
-                      </button>
-                      <button onClick={() => upsertCart(product)}>Add to Cart</button>
-                      {user?.isSuperUser ? (
-                        <button
-                          className="danger"
-                          onClick={() => handleDeleteProduct(product.id)}
-                          disabled={adminLoading}
-                        >
-                          Remove
-                        </button>
-                      ) : null}
-                    </div>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <p className="empty-result">No products match this collection yet.</p>
-            )}
+          <div className="mb-4 grid gap-3 sm:grid-cols-3">
+            <select
+              value={selectedCategory}
+              onChange={(event) => setSelectedCategory(event.target.value)}
+              disabled={productsLoading}
+              className="w-full rounded-xl border border-amber-900/20 bg-white/80 px-4 py-3 text-sm font-semibold text-amber-900 disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              {FILTER_CATEGORIES.map((category) => (
+                <option key={category} value={category}>
+                  {category === "all" ? "All Categories" : category}
+                </option>
+              ))}
+            </select>
+            <select
+              value={selectedSort}
+              onChange={(event) => setSelectedSort(event.target.value)}
+              disabled={productsLoading}
+              className="w-full rounded-xl border border-amber-900/20 bg-white/80 px-4 py-3 text-sm font-semibold text-amber-900 disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              <option value="">Sort by</option>
+              <option value="low">Price: Low to High</option>
+              <option value="high">Price: High to Low</option>
+            </select>
+            <button
+              type="button"
+              className="w-full min-h-[44px] rounded-xl border border-amber-900/20 bg-white px-4 py-3 text-sm font-semibold text-amber-900 transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-70"
+              onClick={() => {
+                setSelectedCategory("all");
+                setSelectedSort("");
+              }}
+              disabled={productsLoading}
+            >
+              Reset Filters
+            </button>
           </div>
-        </section>
+          {productsLoading ? (
+            <ProductGridSkeleton count={6} />
+          ) : visibleProducts.length > 0 ? (
+            <m.div
+              className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3"
+              variants={productGridVariants}
+              initial={shouldReduceMotion ? false : "hidden"}
+              animate={shouldReduceMotion ? undefined : "show"}
+            >
+              {visibleProducts.map((product) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  onQuickView={() => handleOpenProduct(product.id)}
+                  onAddToCart={upsertCart}
+                  onDelete={handleDeleteProduct}
+                  isSuperUser={Boolean(user?.isSuperUser)}
+                  isAdminLoading={adminLoading}
+                  isActionsDisabled={loading || adminLoading || productsLoading}
+                  variants={productCardVariants}
+                />
+              ))}
+            </m.div>
+          ) : (
+            <p className="empty-result">No products match this collection yet.</p>
+          )}
+        </m.section>
       ) : null}
 
       {isHomeRoute ? (
         <>
-          <section className="section reveal" id="categories">
+          <section className="section reveal !max-w-screen-xl mx-auto !px-4 sm:!px-6 md:!px-10" id="categories">
             <div className="section-head">
               <h2>Shop by Category</h2>
-              <p>{visibleProducts.length} products available</p>
+              <p>
+                {productsLoading ? "Loading categories..." : `${visibleProducts.length} products available`}
+              </p>
             </div>
             <div className="category-grid">
-              {categories.map(([name, count]) => {
-                const categoryPath = CATEGORY_ROUTE_MAP[name] || "/collections/candles";
-                return (
-                  <a
-                    key={name}
-                    href={categoryPath}
-                    className="category-card category-link"
-                    onClick={(event) => handleRouteClick(event, categoryPath)}
-                  >
-                    <h3>{name}</h3>
-                    <p>{CATEGORY_META[name] || "Elegant candles crafted for every moment."}</p>
-                    <span>{count} items</span>
-                  </a>
-                );
-              })}
+              {productsLoading
+                ? Array.from({ length: 4 }).map((_, index) => (
+                    <div key={index} className="category-card">
+                      <div className="h-6 w-1/2 animate-pulse rounded-md bg-amber-100" />
+                      <div className="mt-3 h-4 w-full animate-pulse rounded-full bg-amber-100" />
+                      <div className="mt-2 h-4 w-2/3 animate-pulse rounded-full bg-amber-100" />
+                      <div className="mt-4 h-4 w-1/3 animate-pulse rounded-full bg-amber-100" />
+                    </div>
+                  ))
+                : categories.map(([name, count]) => {
+                    const categoryPath = CATEGORY_ROUTE_MAP[name] || "/collections/candles";
+                    return (
+                      <a
+                        key={name}
+                        href={categoryPath}
+                        className="category-card category-link"
+                        onClick={(event) => handleRouteClick(event, categoryPath)}
+                      >
+                        <h3>{name}</h3>
+                        <p>{CATEGORY_META[name] || "Elegant candles crafted for every moment."}</p>
+                        <span>{count} items</span>
+                      </a>
+                    );
+                  })}
             </div>
           </section>
 
-          <section className="section reveal">
+          <section className="section reveal !max-w-screen-xl mx-auto !px-4 sm:!px-6 md:!px-10">
             <div className="section-head">
               <h2>Why Choose MayAbri</h2>
             </div>
@@ -864,7 +1139,7 @@ function App() {
             </div>
           </section>
 
-          <section className="section reveal" id="testimonials">
+          <section className="section reveal !max-w-screen-xl mx-auto !px-4 sm:!px-6 md:!px-10" id="testimonials">
             <div className="section-head">
               <h2>What Customers Say</h2>
             </div>
@@ -893,7 +1168,7 @@ function App() {
             </div>
           </section>
 
-          <section className="section reveal" id="brand-story">
+          <section className="section reveal !max-w-screen-xl mx-auto !px-4 sm:!px-6 md:!px-10" id="brand-story">
             <div className="section-head">
               <h2>Brand Story</h2>
             </div>
@@ -910,7 +1185,7 @@ function App() {
             </article>
           </section>
 
-          <section className="section reveal gifting-entry">
+          <section className="section reveal !max-w-screen-xl mx-auto !px-4 sm:!px-6 md:!px-10 gifting-entry">
             <div className="section-head">
               <h2>Looking for gifting instead of regular shopping?</h2>
             </div>
@@ -937,7 +1212,7 @@ function App() {
 
       {isGiftingRoute ? (
         <>
-          <section className="section reveal gifting-showcase">
+          <section className="section reveal !max-w-screen-xl mx-auto !px-4 sm:!px-6 md:!px-10 gifting-showcase">
             <div className="showcase-grid">
               <article className="showcase-copy">
                 <p className="eyebrow">Sheesh Mahal Collection</p>
@@ -953,7 +1228,7 @@ function App() {
             </div>
           </section>
 
-          <section className="section reveal gifting-showcase alt">
+          <section className="section reveal !max-w-screen-xl mx-auto !px-4 sm:!px-6 md:!px-10 gifting-showcase alt">
             <div className="showcase-grid">
               <div className="showcase-media">
                 <img src="/products/mayabri-real-5.jpeg" alt="Signature candle styling" />
@@ -968,7 +1243,7 @@ function App() {
             </div>
           </section>
 
-          <section className="section reveal reel-section">
+          <section className="section reveal !max-w-screen-xl mx-auto !px-4 sm:!px-6 md:!px-10 reel-section">
             <div className="section-head">
               <div>
                 <h2>Instagram Reel</h2>
@@ -992,7 +1267,7 @@ function App() {
             </p>
           </section>
 
-        <section className="section reveal gifting-section" id="gifting">
+        <section className="section reveal !max-w-screen-xl mx-auto !px-4 sm:!px-6 md:!px-10 gifting-section" id="gifting">
           <div className="section-head">
             <h2>Gifting & Corporate Gifting</h2>
             <p>Use gift wrap at checkout or submit a corporate bulk request.</p>
@@ -1001,7 +1276,12 @@ function App() {
             <article className="gift-card">
               <h3>Popular Discount Codes</h3>
               <p>`MAYA10` • `GIFT15` • `CORPORATE20`</p>
-              {!productsLoading && giftingPreviewProducts.length > 0 ? (
+              {productsLoading ? (
+                <p className="loading-inline" role="status">
+                  <span className="loading-spinner" aria-hidden="true" />
+                  Loading gift picks...
+                </p>
+              ) : giftingPreviewProducts.length > 0 ? (
                 <div className="gift-chip-row">
                   {giftingPreviewProducts.slice(0, 4).map((product) => (
                     <button
@@ -1009,6 +1289,7 @@ function App() {
                       type="button"
                       className="gift-chip"
                       onClick={() => upsertCart(product)}
+                      disabled={loading}
                     >
                       {product.name} • INR {product.price}
                     </button>
@@ -1082,7 +1363,7 @@ function App() {
       ) : null}
 
       {user?.isSuperUser ? (
-        <section className="section reveal admin-section" id="admin">
+        <section className="section reveal !max-w-screen-xl mx-auto !px-4 sm:!px-6 md:!px-10 admin-section" id="admin">
           <div className="section-head">
             <h2>Super User Panel</h2>
             <p>Add/remove products and promote users.</p>
@@ -1120,25 +1401,35 @@ function App() {
                   }
                   required
                 />
-                <input
-                  type="text"
-                  placeholder="Category (Floral/Luxury...)"
+                <select
                   value={adminForm.category}
                   onChange={(event) =>
                     setAdminForm((prev) => ({ ...prev, category: event.target.value }))
                   }
                   required
-                />
+                >
+                  <option value="">Select category</option>
+                  {ADMIN_PRODUCT_CATEGORIES.map((category) => (
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
+                  ))}
+                </select>
                 <input
-                  type="text"
-                  placeholder="Image path (ex: /products/candle-rose.svg)"
-                  value={adminForm.image}
-                  onChange={(event) =>
-                    setAdminForm((prev) => ({ ...prev, image: event.target.value }))
-                  }
-                  required
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAdminImageUpload}
+                  disabled={adminImageUploading}
+                  required={!adminForm.image}
                 />
-                <button type="submit" disabled={adminLoading}>
+                {adminImageUploading ? <p className="upload-status">Uploading image...</p> : null}
+                {adminForm.image ? (
+                  <div className="upload-preview">
+                    <img src={adminForm.image} alt="Uploaded product preview" />
+                    <p>Image uploaded successfully.</p>
+                  </div>
+                ) : null}
+                <button type="submit" disabled={adminLoading || adminImageUploading}>
                   {adminLoading ? "Saving..." : "Add Product"}
                 </button>
               </form>
@@ -1163,10 +1454,10 @@ function App() {
         </section>
       ) : null}
 
-      <section className="section reveal layout-grid" id="shop">
+      <section className="section reveal !max-w-screen-xl mx-auto !px-4 sm:!px-6 md:!px-10 layout-grid" id="shop">
         <article className="catalog-card">
           <h2>Secure Account Access</h2>
-          <p className="subtext">Log in to checkout with Stripe and track your profile.</p>
+          <p className="subtext">Log in to checkout securely with Razorpay and track your profile.</p>
           <section className="auth-card">
             <div className="auth-head">
               <h3>
@@ -1229,108 +1520,31 @@ function App() {
           </section>
         </article>
 
-        <aside className="cart-card">
-          <h2>
-            Cart
-            <span className="cart-count">{cart.length}</span>
-          </h2>
-          {!user ? (
-            <p className="auth-required-note">
-              Please sign up or log in to place an order.
-            </p>
-          ) : null}
-          {cart.length === 0 ? (
-            <p className="empty-text">Your cart is empty.</p>
-          ) : (
-            <>
-              {cart.map((item) => (
-                <div key={item.id} className="cart-item">
-                  <div>
-                    <h4>{item.name}</h4>
-                    <p>INR {item.price}</p>
-                  </div>
-                  <div className="cart-actions">
-                    <input
-                      type="number"
-                      min={1}
-                      value={item.quantity}
-                      onChange={(event) =>
-                        updateQty(item.id, Number(event.target.value || 1))
-                      }
-                    />
-                    <button onClick={() => removeFromCart(item.id)}>Remove</button>
-                  </div>
-                </div>
-              ))}
-              <div className="discount-box">
-                <input
-                  type="text"
-                  placeholder="Discount code"
-                  value={discountCode}
-                  onChange={(event) => setDiscountCode(event.target.value)}
-                />
-                <button onClick={handleApplyDiscount} type="button">
-                  Apply
-                </button>
-                {appliedDiscountCode ? (
-                  <button className="ghost" type="button" onClick={handleRemoveDiscount}>
-                    Remove
-                  </button>
-                ) : null}
-              </div>
-              <label className="gift-wrap">
-                <input
-                  type="checkbox"
-                  checked={giftWrap}
-                  onChange={(event) => setGiftWrap(event.target.checked)}
-                />
-                Add gift wrap (INR 99)
-              </label>
-              {giftWrap ? (
-                <input
-                  type="text"
-                  placeholder="Gift message (optional)"
-                  value={giftMessage}
-                  onChange={(event) => setGiftMessage(event.target.value)}
-                />
-              ) : null}
-              <div className="cart-footer">
-                <p>Subtotal</p>
-                <p>INR {cartTotal}</p>
-              </div>
-              {discountPercent > 0 ? (
-                <div className="cart-footer">
-                  <p>Discount ({appliedDiscountCode})</p>
-                  <p>- {discountPercent}%</p>
-                </div>
-              ) : null}
-              {giftWrap ? (
-                <div className="cart-footer">
-                  <p>Gift Wrap</p>
-                  <p>INR 99</p>
-                </div>
-              ) : null}
-              <div className="cart-footer payable">
-                <p>Payable Total</p>
-                <p>INR {payableTotal}</p>
-              </div>
-              <button
-                className="checkout"
-                onClick={handleCheckout}
-                disabled={loading || !user}
-              >
-                {loading
-                  ? "Processing..."
-                  : user
-                    ? "Checkout with Stripe"
-                    : "Login to Place Order"}
-              </button>
-            </>
-          )}
-        </aside>
+        <CartSection
+          cart={cart}
+          user={user}
+          discountCode={discountCode}
+          onDiscountCodeChange={setDiscountCode}
+          onApplyDiscount={handleApplyDiscount}
+          onRemoveDiscount={handleRemoveDiscount}
+          appliedDiscountCode={appliedDiscountCode}
+          discountPercent={discountPercent}
+          giftWrap={giftWrap}
+          onGiftWrapChange={setGiftWrap}
+          giftMessage={giftMessage}
+          onGiftMessageChange={setGiftMessage}
+          cartTotal={cartTotal}
+          payableTotal={payableTotal}
+          paymentLoading={paymentLoading}
+          onIncreaseQty={incrementQty}
+          onDecreaseQty={decrementQty}
+          onUpdateQty={updateQty}
+          onRemoveItem={removeFromCart}
+          onCheckout={handleCheckout}
+        />
       </section>
 
-      <section className="section reveal newsletter" id="newsletter">
+      <section className="section reveal !max-w-screen-xl mx-auto !px-4 sm:!px-6 md:!px-10 newsletter" id="newsletter">
         <div>
           <h2>Get Launch Drops, Offers, and Festive Edits</h2>
           <p>Join our newsletter for early access to seasonal collections.</p>
@@ -1346,7 +1560,7 @@ function App() {
         </form>
       </section>
 
-      <footer className="footer reveal">
+      <footer className="footer reveal !max-w-screen-xl mx-auto px-4 sm:px-6 md:px-10">
         <a href="/" className="brand" onClick={(event) => handleRouteClick(event, "/")}>
           <img src="/mayabri-logo.jpeg" alt="MayAbri Candles logo" />
           <span>MayAbri Candles</span>
@@ -1376,12 +1590,15 @@ function App() {
               <h3>{quickView.name}</h3>
               <p className="description">{quickView.description}</p>
               <p className="price">INR {quickView.price}</p>
-              <button onClick={() => upsertCart(quickView)}>Add to Cart</button>
+              <button onClick={() => upsertCart(quickView)} disabled={loading || productsLoading}>
+                Add to Cart
+              </button>
             </div>
           </article>
         </div>
       ) : null}
-    </main>
+      </m.main>
+    </LazyMotion>
   );
 }
 

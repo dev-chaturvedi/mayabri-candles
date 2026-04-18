@@ -454,6 +454,25 @@
   color: var(--ink-soft);
 }
 
+.loading-inline {
+  margin: 0.35rem 0 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--ink-soft);
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.loading-spinner {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  border: 2px solid rgba(170, 124, 78, 0.35);
+  border-top-color: var(--accent);
+  animation: spin 750ms linear infinite;
+}
+
 .product-card,
 .category-card,
 .why-card,
@@ -663,6 +682,11 @@
   padding: 0.34rem 0.64rem;
 }
 
+.gift-chip:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
 .category-card,
 .why-card {
   padding: 1rem;
@@ -792,11 +816,13 @@
 }
 
 input,
+select,
 button {
   font: inherit;
 }
 
-input {
+input,
+select {
   border-radius: 11px;
   border: 1px solid var(--line);
   background: rgba(255, 255, 255, 0.6);
@@ -805,10 +831,41 @@ input {
   transition: border-color 160ms ease, box-shadow 160ms ease;
 }
 
-input:focus {
+input:focus,
+select:focus {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(190, 123, 59, 0.15);
+}
+
+input[type="file"] {
+  cursor: pointer;
+}
+
+.upload-status {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.88rem;
+}
+
+.upload-preview {
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.5);
+  padding: 0.5rem;
+}
+
+.upload-preview img {
+  width: 100%;
+  max-height: 220px;
+  border-radius: 9px;
+  object-fit: cover;
+}
+
+.upload-preview p {
+  margin-top: 0.35rem;
+  color: var(--ink-soft);
+  font-size: 0.84rem;
 }
 
 button {
@@ -1093,6 +1150,12 @@ button.danger {
   }
 }
 
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @keyframes raise {
   from {
     opacity: 0;
@@ -1183,6 +1246,62 @@ button.danger {
 
   .quickview {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .app-shell {
+    padding: 1rem 0 2.4rem;
+  }
+
+  .hero-cta a {
+    width: 100%;
+    justify-content: center;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .auth-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .cart-item {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .cart-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .cart-actions input {
+    flex: 1;
+    min-width: 88px;
+  }
+
+  .cart-actions button {
+    min-height: 44px;
+  }
+
+  .discount-box {
+    grid-template-columns: 1fr;
+  }
+
+  .discount-box button {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .newsletter form {
+    flex-direction: column;
+  }
+
+  .newsletter form button {
+    min-height: 44px;
+    width: 100%;
   }
 }
 

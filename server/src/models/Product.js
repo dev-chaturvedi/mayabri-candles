@@ -1,5 +1,7 @@
 const mongoose = require("mongoose");
 
+const PRODUCT_CATEGORIES = ["Jar", "Decorative", "Gift", "Festival"];
+
 const productSchema = new mongoose.Schema(
   {
     id: {
@@ -26,6 +28,7 @@ const productSchema = new mongoose.Schema(
     category: {
       type: String,
       required: true,
+      enum: PRODUCT_CATEGORIES,
       trim: true,
     },
     image: {
@@ -37,4 +40,7 @@ const productSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-module.exports = mongoose.model("Product", productSchema);
+const Product = mongoose.model("Product", productSchema);
+
+module.exports = Product;
+module.exports.PRODUCT_CATEGORIES = PRODUCT_CATEGORIES;
