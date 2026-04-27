@@ -1,15 +1,8 @@
-@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;700&family=Manrope:wght@400;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Manrope:wght@300;400;600;700&display=swap");
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-:root {
-  --ink-900: #2f1f13;
-  --ink-700: #644b3a;
-  --accent-800: #6d3b1e;
-  --accent-700: #8d4f28;
-}
 
 * {
   box-sizing: border-box;
@@ -17,30 +10,16 @@
 
 html {
   scroll-behavior: smooth;
-  overflow-x: hidden;
 }
 
 body {
   margin: 0;
-  font-family: "Manrope", "Segoe UI", sans-serif;
-  color: var(--ink-900);
-  background: #f9efe0;
-  overflow-x: hidden;
+  font-family: "Manrope", sans-serif;
+  font-weight: 300;
+  line-height: 1.6;
+  min-height: 100vh;
 }
 
 #root {
   min-height: 100vh;
-  overflow-x: hidden;
-}
-
-h1,
-h2,
-h3,
-h4 {
-  margin: 0;
-  font-family: "Cormorant Garamond", Georgia, serif;
-}
-
-p {
-  margin: 0;
 }
