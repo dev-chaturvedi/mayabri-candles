@@ -11,6 +11,9 @@
   --white: #ffffff;
   --line: rgba(120, 53, 15, 0.16);
   --surface: rgba(255, 255, 255, 0.82);
+  --toast-success-bg: #78350f;
+  --toast-error-bg: #9f2d2d;
+  --toast-text: #f9efe0;
   --shadow-rest: 0 4px 12px rgba(47, 31, 19, 0.1);
   --shadow-hover: 0 24px 40px rgba(47, 31, 19, 0.2);
   --ease-hover: cubic-bezier(0.4, 0, 0.2, 1);
@@ -159,10 +162,10 @@ body {
   justify-content: center;
   cursor: pointer;
   transition:
-    transform 0.3s var(--ease-hover),
-    color 0.3s var(--ease-hover),
-    border-color 0.3s var(--ease-hover),
-    box-shadow 0.3s var(--ease-hover);
+    transform 0.2s var(--ease-hover),
+    color 0.2s var(--ease-hover),
+    border-color 0.2s var(--ease-hover),
+    box-shadow 0.2s var(--ease-hover);
 }
 
 .icon-button svg {
@@ -176,6 +179,10 @@ body {
   color: var(--primary);
   border-color: rgba(177, 125, 82, 0.5);
   box-shadow: var(--shadow-rest);
+}
+
+.icon-button:active {
+  transform: scale(0.95);
 }
 
 .hero {
@@ -237,6 +244,12 @@ body {
   transition: transform 0.4s var(--ease-parallax);
 }
 
+.bg-text,
+.story-bg,
+.timeline-bg-word {
+  display: none;
+}
+
 .particle-canvas {
   position: absolute;
   inset: 0;
@@ -259,6 +272,68 @@ body {
 
 .hero-content.compact {
   max-width: 680px;
+}
+
+.hero-title-float {
+  animation: hero-float 6s ease-in-out infinite;
+  will-change: transform;
+}
+
+.hero-subtitle-float {
+  animation: hero-float 6s ease-in-out 0.35s infinite;
+  will-change: transform;
+}
+
+@keyframes hero-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.hero-orb {
+  position: absolute;
+  width: clamp(170px, 18vw, 280px);
+  aspect-ratio: 1;
+  right: clamp(18px, 5vw, 80px);
+  top: clamp(30px, 8vh, 110px);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 35% 35%, rgba(249, 239, 224, 0.95), rgba(177, 125, 82, 0.46) 40%, rgba(120, 53, 15, 0.08) 70%),
+    conic-gradient(from 45deg, rgba(177, 125, 82, 0.5), rgba(234, 214, 191, 0.15), rgba(120, 53, 15, 0.4), rgba(177, 125, 82, 0.5));
+  box-shadow:
+    0 0 40px rgba(177, 125, 82, 0.34),
+    inset 0 0 28px rgba(255, 255, 255, 0.35);
+  opacity: 0.72;
+  pointer-events: none;
+  animation: orb-rotate 20s linear infinite;
+}
+
+.hero-orb::before {
+  content: "";
+  position: absolute;
+  inset: 14%;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.44);
+}
+
+.hero-orb-core {
+  position: absolute;
+  inset: 29%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.82), rgba(177, 125, 82, 0.22));
+}
+
+@keyframes orb-rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .hero-dual {
@@ -451,11 +526,11 @@ a:hover {
   font-weight: 700;
   cursor: pointer;
   transition:
-    transform 0.3s var(--ease-hover),
-    background-color 0.3s var(--ease-hover),
-    color 0.3s var(--ease-hover),
-    border-color 0.3s var(--ease-hover),
-    box-shadow 0.3s var(--ease-hover);
+    transform 0.2s var(--ease-hover),
+    background-color 0.2s var(--ease-hover),
+    color 0.2s var(--ease-hover),
+    border-color 0.2s var(--ease-hover),
+    box-shadow 0.2s var(--ease-hover);
 }
 
 .primary-btn {
@@ -467,7 +542,7 @@ a:hover {
 .primary-btn:hover {
   background: var(--primary);
   border-color: var(--primary);
-  transform: scale(1.04);
+  transform: scale(1.05);
   box-shadow: var(--shadow-hover);
 }
 
@@ -481,7 +556,7 @@ a:hover {
 .secondary-btn.active {
   border-color: var(--primary);
   color: var(--primary);
-  transform: scale(1.03);
+  transform: scale(1.05);
 }
 
 .text-btn {
@@ -493,7 +568,13 @@ a:hover {
 
 .text-btn:hover {
   color: var(--primary);
-  transform: scale(1.02);
+  transform: scale(1.05);
+}
+
+.primary-btn:active,
+.secondary-btn:active,
+.text-btn:active {
+  transform: scale(0.95);
 }
 
 .reveal {
@@ -600,6 +681,11 @@ a:hover {
   outline: none;
 }
 
+.product-card {
+  border-radius: 1.5rem;
+  perspective: 1200px;
+}
+
 .tilt-card:focus-visible {
   box-shadow: 0 0 0 3px rgba(177, 125, 82, 0.45);
 }
@@ -643,6 +729,7 @@ a:hover {
   height: 100%;
   object-fit: cover;
   display: block;
+  transition: transform 0.35s var(--ease-hover), box-shadow 0.35s var(--ease-hover);
 }
 
 .card-gradient {
@@ -1151,6 +1238,11 @@ textarea:focus,
   margin-bottom: 12px;
 }
 
+.hero-photo-card img,
+.gift-showcase-card img {
+  transition: transform 0.35s var(--ease-hover), box-shadow 0.35s var(--ease-hover);
+}
+
 .team-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
@@ -1332,6 +1424,10 @@ textarea:focus,
   animation: fade-step 420ms var(--ease-reveal);
 }
 
+.checkout-step-panel.shake {
+  animation: payment-shake 0.4s ease;
+}
+
 @keyframes fade-step {
   from {
     opacity: 0;
@@ -1340,6 +1436,25 @@ textarea:focus,
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes payment-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-8px);
+  }
+  40% {
+    transform: translateX(8px);
+  }
+  60% {
+    transform: translateX(-6px);
+  }
+  80% {
+    transform: translateX(6px);
   }
 }
 
@@ -1511,6 +1626,58 @@ textarea:focus,
   }
 }
 
+.success-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(47, 31, 19, 0.22);
+  backdrop-filter: blur(24px);
+  padding: 18px;
+}
+
+.success-modal-card {
+  position: relative;
+  width: min(560px, 100%);
+  border-radius: 24px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: var(--shadow-hover);
+  text-align: center;
+  overflow: hidden;
+  padding: 30px 22px 24px;
+  animation: modal-pop 0.38s var(--ease-reveal);
+}
+
+.success-modal-card h3 {
+  margin: 0;
+}
+
+.success-modal-card p {
+  margin: 10px 0 0;
+}
+
+.confetti-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+@keyframes modal-pop {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 .contact-layout {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   align-items: start;
@@ -1641,6 +1808,20 @@ textarea:focus,
   animation: gift-image-pan 11s ease-in-out infinite alternate;
 }
 
+@media (hover: hover) and (pointer: fine) {
+  .card-media-wrapper:hover img,
+  .product-mini-card:hover img,
+  .team-card:hover img,
+  .set-image-frame:hover img,
+  .mini-recommend-card:hover img,
+  .product-carousel:hover img,
+  .hero-photo-card:hover img,
+  .gift-showcase-card:hover img {
+    transform: scale(1.05);
+    box-shadow: 0 20px 40px rgba(47, 31, 19, 0.2);
+  }
+}
+
 .gift-showcase-meta {
   padding: 14px 16px 16px;
 }
@@ -1728,6 +1909,35 @@ textarea:focus,
   border: 1px solid var(--line);
   background: rgba(255, 255, 255, 0.82);
   padding: 44px 20px;
+}
+
+.site-toast {
+  position: fixed;
+  right: 20px;
+  bottom: 24px;
+  z-index: 80;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  color: var(--toast-text);
+  padding: 11px 16px;
+  background: var(--toast-success-bg);
+  box-shadow: var(--shadow-hover);
+  letter-spacing: 0.04em;
+  font-size: 0.9rem;
+  font-weight: 600;
+  opacity: 0;
+  transform: translateY(16px);
+  pointer-events: none;
+  transition: opacity 0.24s var(--ease-hover), transform 0.24s var(--ease-hover);
+}
+
+.site-toast.error {
+  background: var(--toast-error-bg);
+}
+
+.site-toast.show {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .site-footer {
@@ -1898,6 +2108,10 @@ textarea:focus,
     margin: 0 22px 26px;
     min-height: 360px;
   }
+
+  .hero-orb {
+    display: none;
+  }
 }
 
 @media (max-width: 768px) {
@@ -1988,6 +2202,13 @@ textarea:focus,
     transform: none;
   }
 
+  .site-toast {
+    left: 14px;
+    right: 14px;
+    bottom: 14px;
+    text-align: center;
+  }
+
   .footer-bottom {
     flex-direction: column;
     align-items: flex-start;
@@ -2017,5 +2238,24 @@ textarea:focus,
   .start-image-stack .hero-photo-card-bottom,
   .gift-hero-visual .hero-photo-card-top {
     display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-title-float,
+  .hero-subtitle-float,
+  .hero-orb,
+  .gift-showcase-card img,
+  .checkmark-wrap circle,
+  .checkmark-wrap path,
+  .checkout-step-panel,
+  .site-toast,
+  .start-image-stack.visible .hero-photo-card-main,
+  .start-image-stack.visible .hero-photo-card-top,
+  .start-image-stack.visible .hero-photo-card-bottom,
+  .gift-hero-visual.visible .hero-photo-card-main,
+  .gift-hero-visual.visible .hero-photo-card-top {
+    animation: none !important;
+    transition: none !important;
   }
 }

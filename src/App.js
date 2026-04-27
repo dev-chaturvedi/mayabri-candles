@@ -411,6 +411,14 @@ function prefersReducedMotion() {
   );
 }
 
+function canUseHover3D() {
+  return (
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(hover: hover) and (pointer: fine)").matches
+  );
+}
+
 function getStaggerClass(index) {
   const step = (index % 4) + 1;
   return `stagger-${step}`;
@@ -571,29 +579,167 @@ function ParticleCanvas({ id, count = 132, className = "" }) {
   return <canvas id={id} ref={canvasRef} className={`particle-canvas ${className}`.trim()} aria-hidden="true" />;
 }
 
-function TiltCard({ id, className = "", children, maxTilt = 13, maxScale = 1.06 }) {
+function HeroOrb({ id }) {
+  const [isDesktop, setIsDesktop] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+      return undefined;
+    }
+
+    const mediaQuery = window.matchMedia("(min-width: 1024px)");
+    const update = () => setIsDesktop(mediaQuery.matches);
+    update();
+
+    mediaQuery.addEventListener("change", update);
+    return () => mediaQuery.removeEventListener("change", update);
+  }, []);
+
+  if (!isDesktop || prefersReducedMotion()) {
+    return null;
+  }
+
+  return (
+    <div id={id} className="hero-orb" aria-hidden="true">
+      <span className="hero-orb-core" />
+    </div>
+  );
+}
+
+function ConfettiCanvas({ active }) {
+  const confettiRef = useRef(null);
+
+  useEffect(() => {
+    if (!active || process.env.NODE_ENV === "test" || prefersReducedMotion()) {
+      return undefined;
+    }
+
+    const canvas = confettiRef.current;
+    if (!canvas) {
+      return undefined;
+    }
+
+    const context = canvas.getContext("2d");
+    if (!context) {
+      return undefined;
+    }
+
+    const colors = ["#b17d52", "#f9efe0", "#78350f", "#ead6bf", "#ffffff"];
+    let animationFrame = 0;
+    let width = 0;
+    let height = 0;
+
+    const pieces = Array.from({ length: 120 }, () => ({
+      x: Math.random(),
+      y: Math.random() * -0.35,
+      vx: (Math.random() - 0.5) * 0.01,
+      vy: 0.006 + Math.random() * 0.02,
+      size: 4 + Math.random() * 5,
+      rotation: Math.random() * Math.PI * 2,
+      rotationSpeed: (Math.random() - 0.5) * 0.2,
+      color: colors[Math.floor(Math.random() * colors.length)],
+    }));
+
+    const setSize = () => {
+      width = canvas.offsetWidth;
+      height = canvas.offsetHeight;
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = Math.floor(width * dpr);
+      canvas.height = Math.floor(height * dpr);
+      context.setTransform(dpr, 0, 0, dpr, 0, 0);
+    };
+
+    const draw = () => {
+      context.clearRect(0, 0, width, height);
+
+      pieces.forEach((piece) => {
+        piece.x += piece.vx;
+        piece.y += piece.vy;
+        piece.rotation += piece.rotationSpeed;
+
+        if (piece.y > 1.2) {
+          piece.y = -0.2;
+          piece.x = Math.random();
+        }
+
+        const px = piece.x * width;
+        const py = piece.y * height;
+
+        context.save();
+        context.translate(px, py);
+        context.rotate(piece.rotation);
+        context.fillStyle = piece.color;
+        context.fillRect(-piece.size / 2, -piece.size / 2, piece.size, piece.size * 0.7);
+        context.restore();
+      });
+
+      animationFrame = window.requestAnimationFrame(draw);
+    };
+
+    setSize();
+    draw();
+    window.addEventListener("resize", setSize);
+
+    return () => {
+      window.cancelAnimationFrame(animationFrame);
+      window.removeEventListener("resize", setSize);
+    };
+  }, [active]);
+
+  return <canvas className="confetti-canvas" ref={confettiRef} aria-hidden="true" />;
+}
+
+function TiltCard({ id, className = "", children, maxTilt = 5, maxScale = 1.08 }) {
+  const frameRef = useRef(0);
+  const pointRef = useRef({ x: 0.5, y: 0.5 });
+
+  useEffect(
+    () => () => {
+      if (frameRef.current) {
+        window.cancelAnimationFrame(frameRef.current);
+        frameRef.current = 0;
+      }
+    },
+    []
+  );
+
   const handleMove = (event) => {
-    if (
-      prefersReducedMotion() ||
-      (typeof window.matchMedia === "function" &&
-        window.matchMedia("(hover: none)").matches)
-    ) {
+    if (prefersReducedMotion() || !canUseHover3D()) {
       return;
     }
     const element = event.currentTarget;
     const rect = element.getBoundingClientRect();
-    const x = (event.clientX - rect.left) / rect.width;
-    const y = (event.clientY - rect.top) / rect.height;
+    pointRef.current = {
+      x: Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width)),
+      y: Math.min(1, Math.max(0, (event.clientY - rect.top) / rect.height)),
+    };
 
-    const rotateY = (x - 0.5) * (maxTilt * 2);
-    const rotateX = (0.5 - y) * (maxTilt * 2);
-    const scaleBoost = 1 + Math.min(0.08, Math.abs(x - 0.5) * 0.08 + Math.abs(y - 0.5) * 0.08);
-    const safeScale = Math.min(maxScale, scaleBoost);
+    if (frameRef.current) {
+      return;
+    }
 
-    element.style.transform = `perspective(1200px) rotateX(${rotateX.toFixed(2)}deg) rotateY(${rotateY.toFixed(2)}deg) scale(${safeScale.toFixed(3)})`;
+    frameRef.current = window.requestAnimationFrame(() => {
+      const x = pointRef.current.x;
+      const y = pointRef.current.y;
+      const constrainedTilt = Math.min(5, Math.abs(maxTilt));
+      const constrainedScale = Math.min(1.08, maxScale);
+      const rotateY = (x - 0.5) * constrainedTilt * 2;
+      const rotateX = (0.5 - y) * constrainedTilt * 2;
+      const scaleBoost = 1 + Math.min(0.08, Math.abs(x - 0.5) * 0.08 + Math.abs(y - 0.5) * 0.08);
+      const safeScale = Math.min(constrainedScale, scaleBoost);
+
+      element.style.transition = "transform 70ms linear";
+      element.style.transform = `perspective(1200px) rotateX(${rotateX.toFixed(2)}deg) rotateY(${rotateY.toFixed(2)}deg) scale(${safeScale.toFixed(3)})`;
+      frameRef.current = 0;
+    });
   };
 
   const handleLeave = (event) => {
+    if (frameRef.current) {
+      window.cancelAnimationFrame(frameRef.current);
+      frameRef.current = 0;
+    }
+    event.currentTarget.style.transition = "transform 0.5s cubic-bezier(0.23,1,0.32,1)";
     event.currentTarget.style.transform = "perspective(1200px) rotateX(0deg) rotateY(0deg) scale(1)";
   };
 
@@ -737,7 +883,7 @@ function SharedFooter({ onNavigate }) {
   );
 }
 
-function CollectionsPage() {
+function CollectionsPage({ onAddToCart }) {
   const [search, setSearch] = useState("");
   const [familyFilter, setFamilyFilter] = useState(["floral", "woody", "citrus", "fresh", "gourmand"]);
   const [occasionFilter, setOccasionFilter] = useState(["meditation", "gifting", "home-refresh"]);
@@ -774,20 +920,18 @@ function CollectionsPage() {
     <>
       <section className="hero hero-medium reveal">
         <div className="hero-layers">
-          <div className="layer layer-one" data-speed="-0.35" />
+          <div className="layer layer-one" data-speed="-0.5" />
           <div className="layer layer-two" data-speed="-0.18" />
           <div className="layer layer-three" data-speed="0.1" />
-          <div className="bg-text" data-speed="0.12">
-            COLLECTIONS
-          </div>
+          <HeroOrb id="hero-orb-collections" />
           <ParticleCanvas id="particles-collections" count={138} />
         </div>
 
         <div className="hero-dual">
           <div className="hero-content">
             <p className="eyebrow">MayAbri Library</p>
-            <h1>Collections</h1>
-            <p>Discover the perfect scent for every moment</p>
+            <h1 className="hero-title-float">Collections</h1>
+            <p className="hero-subtitle-float">Discover the perfect scent for every moment</p>
             <div className="hero-filter-row reveal stagger-2">
               <input
                 id="collection-search"
@@ -889,7 +1033,7 @@ function CollectionsPage() {
             <TiltCard
               id={item.id}
               key={item.id}
-              className={`collection-card reveal ${getStaggerClass(index)}`}
+              className={`collection-card product-card reveal ${getStaggerClass(index)}`}
               maxTilt={12}
               maxScale={1.08}
             >
@@ -902,7 +1046,12 @@ function CollectionsPage() {
                     <path d="M11.7 11.4c-1.3 1.1-2.2 2.1-2.2 3.8 0 1.6 1.1 2.8 2.5 2.8s2.5-1.2 2.5-2.8c0-1.2-.6-2.1-1.5-3.3-.7-.9-1-1.7-.7-2.8a6 6 0 0 0-.6.4Z" />
                   </svg>
                 </div>
-                <button id={`${item.id}-cta`} type="button" className="hover-cta">
+                <button
+                  id={`${item.id}-cta`}
+                  type="button"
+                  className="hover-cta"
+                  onClick={() => onAddToCart?.("Added! 🛒", "success")}
+                >
                   Add to Cart
                 </button>
               </div>
@@ -934,7 +1083,7 @@ function CollectionsPage() {
   );
 }
 
-function ProductDetailPage() {
+function ProductDetailPage({ onAddToCart }) {
   const [imageIndex, setImageIndex] = useState(0);
   const [size, setSize] = useState("220g");
   const [quantity, setQuantity] = useState(1);
@@ -955,11 +1104,9 @@ function ProductDetailPage() {
     <>
       <section className="hero product-hero reveal">
         <div className="hero-layers">
-          <div className="layer layer-one" data-speed="-0.28" />
+          <div className="layer layer-one" data-speed="-0.5" />
           <div className="layer layer-four" data-speed="0.08" />
-          <div className="bg-text" data-speed="0.12">
-            SIGNATURE SCENT
-          </div>
+          <HeroOrb id="hero-orb-product" />
           <ParticleCanvas id="particles-product" count={128} />
         </div>
 
@@ -982,12 +1129,12 @@ function ProductDetailPage() {
 
           <article className="product-headline reveal stagger-2">
             <p className="eyebrow">MayAbri Atelier Edition</p>
-            <h1>Velvet Neroli Candle</h1>
+            <h1 className="hero-title-float">Velvet Neroli Candle</h1>
             <div className="rating-row" id="product-rating">
               <span>★★★★★</span>
               <p>4.9 • 142 reviews</p>
             </div>
-            <p>
+            <p className="hero-subtitle-float">
               A refined floral-woody composition layered for calm mornings and amber-lit evenings.
             </p>
           </article>
@@ -1030,9 +1177,6 @@ function ProductDetailPage() {
           </div>
 
           <section className="scent-story reveal" id="product-scent-story">
-            <div className="story-bg" data-speed="0.1">
-              SCENT STORY
-            </div>
             <h2>Scent Story</h2>
             <p>
               Inspired by twilight courtyards and soft linen drapes, Velvet Neroli opens bright, settles floral,
@@ -1091,7 +1235,10 @@ function ProductDetailPage() {
               id="product-add-to-cart"
               type="button"
               className="primary-btn"
-              onClick={() => setNotice(`${quantity} item(s) added to cart.`)}
+              onClick={() => {
+                setNotice(`${quantity} item(s) added to cart.`);
+                onAddToCart?.("Added! 🛒", "success");
+              }}
             >
               Add to Cart
             </button>
@@ -1120,7 +1267,7 @@ function ProductDetailPage() {
             <TiltCard
               id={item.id}
               key={item.id}
-              className={`product-mini-card reveal ${getStaggerClass(index)}`}
+              className={`product-mini-card product-card reveal ${getStaggerClass(index)}`}
               maxTilt={11}
               maxScale={1.06}
             >
@@ -1146,19 +1293,17 @@ function AboutPage() {
     <>
       <section className="hero hero-full reveal">
         <div className="hero-layers">
-          <div className="layer layer-one" data-speed="-0.4" />
+          <div className="layer layer-one" data-speed="-0.5" />
           <div className="layer layer-two" data-speed="-0.22" />
           <div className="layer layer-three" data-speed="0.1" />
           <div className="layer layer-four" data-speed="0.14" />
-          <div className="bg-text" data-speed="0.11">
-            OUR STORY
-          </div>
+          <HeroOrb id="hero-orb-about" />
           <ParticleCanvas id="particles-about" count={142} />
         </div>
         <div className="hero-content">
           <p className="eyebrow">MayAbri Philosophy</p>
-          <h1>Our Story</h1>
-          <p>We believe fragrance can shape atmosphere, memory, and connection.</p>
+          <h1 className="hero-title-float">Our Story</h1>
+          <p className="hero-subtitle-float">We believe fragrance can shape atmosphere, memory, and connection.</p>
         </div>
       </section>
 
@@ -1195,15 +1340,6 @@ function AboutPage() {
       <section className="page-section reveal timeline-section" id="about-timeline">
         <div className="section-headline">
           <h2>Our Journey</h2>
-        </div>
-        <div className="timeline-bg-word" data-speed="0.08">
-          FOUNDED
-        </div>
-        <div className="timeline-bg-word second" data-speed="0.12">
-          EVOLVED
-        </div>
-        <div className="timeline-bg-word third" data-speed="0.15">
-          THRIVING
         </div>
         <div className="timeline">
           {JOURNEY.map((item, index) => (
@@ -1266,11 +1402,19 @@ function AboutPage() {
   );
 }
 
-function CheckoutPage() {
+function CheckoutPage({ onToast, onContinueShopping }) {
   const [step, setStep] = useState(1);
   const [quantities, setQuantities] = useState(() =>
     CART_ITEMS.reduce((acc, item) => ({ ...acc, [item.id]: 1 }), {})
   );
+  const [paymentForm, setPaymentForm] = useState({
+    cardName: "",
+    cardNumber: "",
+    expiry: "",
+    cvc: "",
+  });
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [paymentShake, setPaymentShake] = useState(false);
 
   const subtotal = CART_ITEMS.reduce(
     (sum, item) => sum + item.price * (quantities[item.id] || 1),
@@ -1287,20 +1431,50 @@ function CheckoutPage() {
     }));
   };
 
+  const closeSuccessModal = () => {
+    setShowSuccessModal(false);
+    setStep(1);
+    setPaymentForm({
+      cardName: "",
+      cardNumber: "",
+      expiry: "",
+      cvc: "",
+    });
+    onContinueShopping?.();
+  };
+
+  const handlePlaceOrder = () => {
+    const normalizedCardNumber = paymentForm.cardNumber.replace(/\s+/g, "");
+    const isValid =
+      paymentForm.cardName.trim().length >= 2 &&
+      normalizedCardNumber.length >= 12 &&
+      paymentForm.expiry.trim().length >= 4 &&
+      paymentForm.cvc.trim().length >= 3;
+
+    if (!isValid) {
+      setPaymentShake(true);
+      onToast?.("Payment failed—retry?", "error");
+      window.setTimeout(() => setPaymentShake(false), 420);
+      return;
+    }
+
+    setStep(4);
+    setShowSuccessModal(true);
+    onToast?.("Order Placed Successfully 🎉", "success");
+  };
+
   return (
     <>
       <section className="hero checkout-hero reveal">
         <div className="hero-layers">
-          <div className="layer layer-one" data-speed="-0.12" />
+          <div className="layer layer-one" data-speed="-0.5" />
           <div className="layer layer-three" data-speed="0.08" />
-          <div className="bg-text" data-speed="0.06">
-            CHECKOUT FLOW
-          </div>
+          <HeroOrb id="hero-orb-checkout" />
         </div>
         <div className="hero-content compact">
           <p className="eyebrow">Secure Checkout</p>
-          <h1>Cart to Confirmation</h1>
-          <p>A smooth four-step flow designed for clarity and confidence.</p>
+          <h1 className="hero-title-float">Cart to Confirmation</h1>
+          <p className="hero-subtitle-float">A smooth four-step flow designed for clarity and confidence.</p>
         </div>
       </section>
 
@@ -1383,7 +1557,7 @@ function CheckoutPage() {
                     <TiltCard
                       id={product.id}
                       key={product.id}
-                      className={`mini-recommend-card reveal ${getStaggerClass(index)}`}
+                      className={`mini-recommend-card product-card reveal ${getStaggerClass(index)}`}
                       maxTilt={10}
                       maxScale={1.04}
                     >
@@ -1433,13 +1607,43 @@ function CheckoutPage() {
           ) : null}
 
           {step === 3 ? (
-            <div className="checkout-step-panel" id="checkout-payment-step">
+            <div className={`checkout-step-panel ${paymentShake ? "shake" : ""}`.trim()} id="checkout-payment-step">
               <h3>Payment</h3>
               <form className="form-grid">
-                <input id="payment-card-name" className="full" placeholder="Name on card" />
-                <input id="payment-card-number" className="full" placeholder="Card number" />
-                <input id="payment-expiry" placeholder="MM/YY" />
-                <input id="payment-cvc" placeholder="CVC" />
+                <input
+                  id="payment-card-name"
+                  className="full"
+                  placeholder="Name on card"
+                  value={paymentForm.cardName}
+                  onChange={(event) =>
+                    setPaymentForm((prev) => ({ ...prev, cardName: event.target.value }))
+                  }
+                />
+                <input
+                  id="payment-card-number"
+                  className="full"
+                  placeholder="Card number"
+                  value={paymentForm.cardNumber}
+                  onChange={(event) =>
+                    setPaymentForm((prev) => ({ ...prev, cardNumber: event.target.value }))
+                  }
+                />
+                <input
+                  id="payment-expiry"
+                  placeholder="MM/YY"
+                  value={paymentForm.expiry}
+                  onChange={(event) =>
+                    setPaymentForm((prev) => ({ ...prev, expiry: event.target.value }))
+                  }
+                />
+                <input
+                  id="payment-cvc"
+                  placeholder="CVC"
+                  value={paymentForm.cvc}
+                  onChange={(event) =>
+                    setPaymentForm((prev) => ({ ...prev, cvc: event.target.value }))
+                  }
+                />
                 <label className="toggle-row" htmlFor="payment-billing-same">
                   <input id="payment-billing-same" type="checkbox" defaultChecked />
                   Billing address same as shipping
@@ -1454,7 +1658,7 @@ function CheckoutPage() {
                 <button id="payment-back-shipping" type="button" className="secondary-btn" onClick={() => setStep(2)}>
                   Back
                 </button>
-                <button id="payment-place-order" type="button" className="primary-btn" onClick={() => setStep(4)}>
+                <button id="payment-place-order" type="button" className="primary-btn" onClick={handlePlaceOrder}>
                   Place Order
                 </button>
               </div>
@@ -1473,13 +1677,27 @@ function CheckoutPage() {
               <p className="order-id">Order #MAYA-2026-04127</p>
               <p>Thank you for choosing MayAbri. Your fragrance ritual is on its way.</p>
               <p className="delivery-note">Estimated ship date: April 29, 2026</p>
-              <button id="confirmation-continue-shopping" type="button" className="primary-btn" onClick={() => setStep(1)}>
+              <button id="confirmation-continue-shopping" type="button" className="primary-btn" onClick={closeSuccessModal}>
                 Continue Shopping
               </button>
             </div>
           ) : null}
         </div>
       </section>
+
+      {showSuccessModal ? (
+        <div className="success-modal-backdrop" id="checkout-success-modal" role="dialog" aria-modal="true">
+          <div className="success-modal-card reveal visible">
+            <ConfettiCanvas active={showSuccessModal} />
+            <h3>Order Placed Successfully 🎉</h3>
+            <p>Your MayAbri order is confirmed and now being prepared with care.</p>
+            <p className="order-id">Order #MAYA-2026-04127</p>
+            <button id="modal-continue-shopping" type="button" className="primary-btn" onClick={closeSuccessModal}>
+              Continue Shopping
+            </button>
+          </div>
+        </div>
+      ) : null}
     </>
   );
 }
@@ -1491,17 +1709,15 @@ function ContactPage() {
     <>
       <section className="hero hero-medium reveal">
         <div className="hero-layers">
-          <div className="layer layer-two" data-speed="-0.25" />
+          <div className="layer layer-two" data-speed="-0.5" />
           <div className="layer layer-three" data-speed="0.1" />
-          <div className="bg-text" data-speed="0.12">
-            GET IN TOUCH
-          </div>
+          <HeroOrb id="hero-orb-contact" />
           <ParticleCanvas id="particles-contact" count={126} />
         </div>
         <div className="hero-content">
           <p className="eyebrow">Customer Care</p>
-          <h1>Get In Touch</h1>
-          <p>We&apos;re here to support orders, gifting requests, and fragrance guidance.</p>
+          <h1 className="hero-title-float">Get In Touch</h1>
+          <p className="hero-subtitle-float">We&apos;re here to support orders, gifting requests, and fragrance guidance.</p>
         </div>
       </section>
 
@@ -1592,7 +1808,7 @@ function ContactPage() {
   );
 }
 
-function GiftGuidePage() {
+function GiftGuidePage({ onAddToCart }) {
   const [message, setMessage] = useState("Wishing you warmth, light, and lovely moments.");
   const [occasionFilters, setOccasionFilters] = useState(["birthday", "wedding", "housewarming"]);
   const [activeSlides, setActiveSlides] = useState(() =>
@@ -1617,19 +1833,17 @@ function GiftGuidePage() {
     <>
       <section className="hero hero-medium reveal">
         <div className="hero-layers">
-          <div className="layer layer-one" data-speed="-0.3" />
+          <div className="layer layer-one" data-speed="-0.5" />
           <div className="layer layer-four" data-speed="0.12" />
-          <div className="bg-text" data-speed="0.1">
-            GIFT COLLECTIONS
-          </div>
+          <HeroOrb id="hero-orb-gift" />
           <ParticleCanvas id="particles-gift" count={136} />
         </div>
 
         <div className="hero-dual">
           <div className="hero-content">
             <p className="eyebrow">Curated Sets</p>
-            <h1>Gift Collections</h1>
-            <p>Thoughtful candle edits for milestones, celebrations, and meaningful gestures.</p>
+            <h1 className="hero-title-float">Gift Collections</h1>
+            <p className="hero-subtitle-float">Thoughtful candle edits for milestones, celebrations, and meaningful gestures.</p>
           </div>
 
           <div className="gift-hero-visual reveal stagger-1" id="gift-hero-showcase">
@@ -1708,7 +1922,7 @@ function GiftGuidePage() {
 
         <div className="three-grid featured-set-grid">
           {FEATURED_GIFT_SETS.map((set, index) => (
-            <TiltCard key={set.id} id={set.id} className={`featured-set-card reveal ${getStaggerClass(index)}`} maxTilt={11} maxScale={1.06}>
+            <TiltCard key={set.id} id={set.id} className={`featured-set-card product-card reveal ${getStaggerClass(index)}`} maxTilt={11} maxScale={1.06}>
               <div className="set-image-frame">
                 <img src={set.images[activeSlides[set.id] || 0]} alt={set.name} />
                 <button id={`${set.id}-next-image`} type="button" className="set-next" onClick={() => nextSetImage(set.id)}>
@@ -1719,6 +1933,14 @@ function GiftGuidePage() {
               <p>{set.candles}</p>
               <p className="meta-price">{set.price}</p>
               <p>{set.wrap}</p>
+              <button
+                id={`${set.id}-add`}
+                type="button"
+                className="primary-btn"
+                onClick={() => onAddToCart?.("Added! 🛒", "success")}
+              >
+                Add to Cart
+              </button>
             </TiltCard>
           ))}
         </div>
@@ -1772,6 +1994,12 @@ function NotFoundPage({ onNavigate }) {
 
 function App() {
   const [pathname, setPathname] = useState(() => normalizePath(window.location.pathname));
+  const [siteToast, setSiteToast] = useState({
+    open: false,
+    message: "",
+    tone: "success",
+  });
+  const toastTimerRef = useRef(0);
 
   useEffect(() => {
     const onPopState = () => {
@@ -1781,6 +2009,15 @@ function App() {
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
   }, []);
+
+  useEffect(
+    () => () => {
+      if (toastTimerRef.current) {
+        window.clearTimeout(toastTimerRef.current);
+      }
+    },
+    []
+  );
 
   useEffect(() => {
     const nodes = Array.from(document.querySelectorAll(".reveal"));
@@ -1852,6 +2089,17 @@ function App() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  const triggerToast = (message, tone = "success") => {
+    if (toastTimerRef.current) {
+      window.clearTimeout(toastTimerRef.current);
+    }
+    setSiteToast({ open: true, message, tone });
+    toastTimerRef.current = window.setTimeout(() => {
+      setSiteToast((prev) => ({ ...prev, open: false }));
+      toastTimerRef.current = 0;
+    }, 3000);
+  };
+
   const openSearchFromNav = () => {
     navigate("/collections");
     window.setTimeout(() => {
@@ -1874,12 +2122,12 @@ function App() {
       />
 
       <main className="page-shell">
-        {currentPage === "/collections" ? <CollectionsPage /> : null}
-        {currentPage === "/product-detail" ? <ProductDetailPage /> : null}
+        {currentPage === "/collections" ? <CollectionsPage onAddToCart={triggerToast} /> : null}
+        {currentPage === "/product-detail" ? <ProductDetailPage onAddToCart={triggerToast} /> : null}
         {currentPage === "/about" ? <AboutPage /> : null}
-        {currentPage === "/checkout" ? <CheckoutPage /> : null}
+        {currentPage === "/checkout" ? <CheckoutPage onToast={triggerToast} onContinueShopping={() => navigate("/collections")} /> : null}
         {currentPage === "/contact" ? <ContactPage /> : null}
-        {currentPage === "/gift-guide" ? <GiftGuidePage /> : null}
+        {currentPage === "/gift-guide" ? <GiftGuidePage onAddToCart={triggerToast} /> : null}
         {![
           "/collections",
           "/product-detail",
@@ -1891,6 +2139,10 @@ function App() {
           <NotFoundPage onNavigate={navigate} />
         ) : null}
       </main>
+
+      <div className={`site-toast ${siteToast.open ? "show" : ""} ${siteToast.tone}`.trim()} role="status" aria-live="polite">
+        {siteToast.message}
+      </div>
 
       <SharedFooter onNavigate={navigate} />
     </div>
