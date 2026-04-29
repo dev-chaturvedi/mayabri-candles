@@ -1,95 +1,93 @@
-# MayAbri Candles Storefront
+# Mayabri Candles
 
-<p align="center">
-  <img src="./public/mayabri-logo.jpeg" alt="MayAbri Candles Logo" width="180" />
-</p>
+Premium candle e-commerce experience with a modern MERN architecture and an AI-enhancement roadmap.
 
-Full-stack candle e-commerce app with premium UI, authentication, Stripe checkout, super-user admin controls, and post-payment order email confirmations.
+## Live Demo
+
+- Production: [https://mayabri-candles.vercel.app](https://mayabri-candles.vercel.app)
+
+## Features
+
+### E-commerce Features (Implemented)
+
+- Curated product catalog with category and price sorting
+- Responsive storefront built with React + Tailwind CSS
+- Add-to-cart flow with quantity controls
+- Secure authentication (register/login) with JWT
+- Checkout integrations:
+  - Razorpay order + payment verification flow
+  - Stripe Checkout session + webhook order processing
+- Discount code support and gift-wrap/gift-message options
+- Corporate gifting inquiry form
+- Super-user/admin controls for product management
+- Cloudinary-based product image upload pipeline
+
+### AI Features
+
+- `In Progress`: LLM-powered product recommendation layer
+- `Planned`: RAG-based semantic product discovery
+- `Planned`: Smart customer support chatbot
+- `Planned`: Vector database integration (Pinecone/Chroma) via LangChain
 
 ## Tech Stack
 
-- React (customer storefront UI)
-- Node.js + Express (API)
-- MongoDB (users, products, orders)
-- Stripe Checkout + Stripe Webhooks (payments)
-- Nodemailer SMTP (order confirmation emails)
+### Frontend
 
-## Features Included
+- React.js
+- Tailwind CSS
+- Framer Motion (interaction polish)
 
-- Customer registration/login with JWT authentication
-- Protected profile endpoint (`/api/auth/me`)
-- Super-user roles with promotion endpoint
-- Super-user product management (add/remove)
-- Product catalog from MongoDB (seeded at startup)
-- Cart and quantity management in frontend
-- Discount code support (`MAYA10`, `GIFT15`, `CORPORATE20`)
-- Gift wrap + gift message support in checkout
-- Corporate gifting inquiry form + API
-- Stripe Checkout session creation on backend
-- Stripe webhook handling for paid orders
-- Automatic order confirmation email with payment receipt link
-- Admin UI section visible only to super users
-- Client links to Instagram + YouTube Shorts
+### Backend
 
-## Default Super Users
+- Node.js
+- Express.js
+- JWT Authentication
+- Nodemailer (transactional email)
 
-These emails are treated as super users by default:
+### Database
 
-- `abhaychaturvedi2312@gmail.com`
-- `mayankabriti@gmail.com`
+- MongoDB (Mongoose)
 
-You can add more in `SUPER_USER_EMAILS`.
+### AI Stack
 
-## Project Structure
+- OpenAI API (`Planned/In Progress`)
+- LangChain (`Planned`)
+- Pinecone or Chroma Vector DB (`Planned`)
 
-```text
-.
-├── server/
-│   ├── server.js
-│   └── src/
-│       ├── config/superUsers.js
-│       ├── data/products.js
-│       ├── middleware/auth.js
-│       ├── middleware/superUser.js
-│       ├── models/
-│       │   ├── User.js
-│       │   ├── Product.js
-│       │   └── Order.js
-│       └── routes/
-│           ├── auth.js
-│           ├── checkout.js
-│           └── products.js
-│       └── services/email.js
-└── src/
-    ├── App.js
-    ├── App.css
-    └── api.js
+## Screenshots
+
+> Add your latest visuals here for portfolio impact.
+
+### Desktop
+
+- `docs/screenshots/desktop-home.png`
+- `docs/screenshots/desktop-gift-guide.png`
+
+### Mobile
+
+- `docs/screenshots/mobile-home.png`
+- `docs/screenshots/mobile-checkout.png`
+
+## Installation & Setup
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/dev-chaturvedi/mayabri-candles.git
+cd mayabri-candles
 ```
 
-## 1. Install Dependencies
+### 2. Install dependencies
 
 ```bash
 npm install
 ```
 
-## 2. Configure Environment
+### 3. Configure environment variables
 
-```bash
-cp .env.example .env
-```
+Create a `.env` file in the project root and add the required values (see section below).
 
-Update `.env` values:
-
-- `MONGO_URI`: your MongoDB connection string
-- `JWT_SECRET`: long random secret
-- `SUPER_USER_EMAILS`: comma-separated super-user emails
-- `STRIPE_SECRET_KEY`: Stripe test or live secret key
-- `STRIPE_WEBHOOK_SECRET`: webhook signing secret from Stripe dashboard/CLI
-- `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM`: SMTP credentials for order emails
-- `CLIENT_URL`: frontend URL (default `http://localhost:3000`)
-- `REACT_APP_API_URL`: backend API URL (default `http://localhost:5000/api`)
-
-## 3. Run App (Frontend + Backend)
+### 4. Run locally
 
 ```bash
 npm run dev
@@ -98,47 +96,96 @@ npm run dev
 - Frontend: `http://localhost:3000`
 - Backend: `http://localhost:5000`
 
-## 4. API Quick Reference
-
-- `POST /api/auth/register`
-- `POST /api/auth/login`
-- `GET /api/auth/me` (Bearer token required)
-- `POST /api/auth/make-super-user` (Bearer + super user required)
-- `GET /api/products`
-- `POST /api/products` (Bearer + super user required)
-- `DELETE /api/products/:id` (Bearer + super user required)
-- `POST /api/checkout/create-session` (Bearer token required)
-- `POST /api/checkout/webhook` (Stripe webhook endpoint)
-- `POST /api/inquiries/corporate`
-
-## Super-User Operations
-
-After logging in as a super user, the frontend shows a **Super User Panel** where you can:
-
-- Add a new product
-- Remove an existing product
-- Promote another user to super user by email
-
-## Stripe Webhook (Local)
-
-Run Stripe CLI and forward events to local API:
+### 5. Build for production
 
 ```bash
-stripe listen --forward-to localhost:5000/api/checkout/webhook
+npm run build
 ```
 
-Copy the shown webhook signing secret (`whsec_...`) into `.env` as `STRIPE_WEBHOOK_SECRET`.
+## Environment Variables
 
-## Order Confirmation Emails
+Use this as a starter template:
 
-When Stripe sends `checkout.session.completed`:
+```env
+# App
+API_PORT=5000
+CLIENT_URL=http://localhost:3000
+REACT_APP_API_URL=http://localhost:5000/api
 
-1. Order details are stored in MongoDB (`Order` model)
-2. Receipt URL is fetched from Stripe payment intent/charge
-3. Confirmation email is sent to customer via SMTP
+# Database
+MONGO_URI=
 
-## Next Production Steps
+# Auth
+JWT_SECRET=
+SUPER_USER_EMAILS=
 
-- Add image upload + CDN (Cloudinary/S3)
-- Add shipping and tax handling
-- Add order history page for customers and owners
+# Payments
+RAZORPAY_KEY_ID=
+RAZORPAY_KEY_SECRET=
+REACT_APP_RAZORPAY_KEY_ID=
+STRIPE_SECRET_KEY=
+STRIPE_WEBHOOK_SECRET=
+
+# Email
+SMTP_HOST=
+SMTP_PORT=
+SMTP_SECURE=
+SMTP_USER=
+SMTP_PASS=
+MAIL_FROM=
+
+# Media Uploads
+CLOUDINARY_CLOUD_NAME=
+CLOUDINARY_API_KEY=
+CLOUDINARY_API_SECRET=
+
+# AI (Planned / In Progress)
+OPENAI_API_KEY=
+PINECONE_API_KEY=
+```
+
+## Folder Structure
+
+```text
+mayabri-candles/
+├── public/                  # Static assets
+├── src/                     # React frontend
+│   ├── App.js               # Main UI and page flows
+│   ├── App.css              # Styling and animations
+│   └── api.js               # Frontend API client
+├── server/
+│   ├── server.js            # Express app entry
+│   ├── config/              # Cloudinary config
+│   └── src/
+│       ├── config/          # Discounts, super-user config
+│       ├── data/            # Seed product data
+│       ├── middleware/      # Auth and access control
+│       ├── models/          # Mongoose models
+│       ├── routes/          # API routes (auth, products, payments, etc.)
+│       └── services/        # Email service
+├── package.json
+└── README.md
+```
+
+## Future Improvements
+
+- AI-driven personalization based on user behavior and preferences
+- Agentic AI workflows for support, upsell, and catalog assistance
+- Stronger mobile optimization and performance tuning for low-end devices
+- Expanded analytics for conversion, retention, and product insights
+
+## Contributing
+
+Contributions are welcome.
+
+1. Fork the repository
+2. Create a feature branch
+3. Commit your changes
+4. Open a pull request
+
+## Author
+
+**Abhay Chaturvedi**
+
+- GitHub: [dev-chaturvedi](https://github.com/dev-chaturvedi)
+- LinkedIn: [Add your LinkedIn profile link](https://www.linkedin.com/in/)

@@ -424,6 +424,15 @@ function getStaggerClass(index) {
   return `stagger-${step}`;
 }
 
+const DEFAULT_IMAGE_SIZES = "(max-width: 480px) 92vw, (max-width: 768px) 84vw, (max-width: 1024px) 46vw, 30vw";
+
+function getResponsiveImageAttrs(src, sizes = DEFAULT_IMAGE_SIZES) {
+  return {
+    srcSet: `${src} 640w, ${src} 1024w, ${src} 1600w`,
+    sizes,
+  };
+}
+
 function renderValueIcon(type) {
   if (type === "leaf") {
     return (
@@ -758,6 +767,13 @@ function TiltCard({ id, className = "", children, maxTilt = 5, maxScale = 1.08 }
 }
 
 function SharedNavigation({ pathname, onNavigate, onSearch, onCart }) {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const handleNavigate = (path) => {
+    setMobileMenuOpen(false);
+    onNavigate(path);
+  };
+
   return (
     <header className="site-nav">
       <div className="nav-inner">
@@ -765,40 +781,89 @@ function SharedNavigation({ pathname, onNavigate, onSearch, onCart }) {
           id="nav-home"
           type="button"
           className="brand-link"
-          onClick={() => onNavigate("/collections")}
+          onClick={() => handleNavigate("/collections")}
           aria-label="Go to MayAbri collections"
         >
           <img src="/mayabri-logo.jpeg" alt="MayAbri Candles" className="brand-logo" />
           <span className="brand-text">MayAbri Candles</span>
         </button>
 
-        <nav className="nav-links" aria-label="Main navigation">
+        <nav className="nav-links nav-links-desktop" aria-label="Main navigation">
           {NAV_LINKS.map((item) => (
             <button
               key={item.path}
               id={item.id}
               type="button"
               className={`nav-link ${normalizePath(pathname) === item.path ? "active" : ""}`.trim()}
-              onClick={() => onNavigate(item.path)}
+              onClick={() => handleNavigate(item.path)}
             >
               {item.label}
             </button>
           ))}
         </nav>
 
+        <button
+          id="nav-mobile-toggle"
+          type="button"
+          className="icon-button nav-mobile-toggle"
+          aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
+          aria-expanded={mobileMenuOpen}
+          onClick={() => setMobileMenuOpen((prev) => !prev)}
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            {mobileMenuOpen ? (
+              <path d="M6.7 5.3 12 10.6l5.3-5.3 1.4 1.4-5.3 5.3 5.3 5.3-1.4 1.4-5.3-5.3-5.3 5.3-1.4-1.4 5.3-5.3-5.3-5.3 1.4-1.4Z" />
+            ) : (
+              <path d="M4 6h16v2H4V6Zm0 5h16v2H4v-2Zm0 5h16v2H4v-2Z" />
+            )}
+          </svg>
+        </button>
+
         <div className="nav-actions">
-          <button id="nav-search" type="button" className="icon-button" aria-label="Search collections" onClick={onSearch}>
+          <button
+            id="nav-search"
+            type="button"
+            className="icon-button"
+            aria-label="Search collections"
+            onClick={() => {
+              setMobileMenuOpen(false);
+              onSearch();
+            }}
+          >
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M11 4a7 7 0 1 0 4.4 12.4l4.1 4.1 1.4-1.4-4.1-4.1A7 7 0 0 0 11 4Zm0 2a5 5 0 1 1 0 10 5 5 0 0 1 0-10Z" />
             </svg>
           </button>
-          <button id="nav-cart" type="button" className="icon-button" aria-label="Open checkout" onClick={onCart}>
+          <button
+            id="nav-cart"
+            type="button"
+            className="icon-button"
+            aria-label="Open checkout"
+            onClick={() => {
+              setMobileMenuOpen(false);
+              onCart();
+            }}
+          >
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M7 5h13l-1.3 7.2a2 2 0 0 1-2 1.6H9L8 17h11v2H7a2 2 0 0 1-2-2c0-.3 0-.6.2-.8L7 5Zm-4 0h2.7l.9 2.6L5.4 15H3v-2h1l.9-5H3V5Zm6.5 15a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Zm7 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z" />
             </svg>
           </button>
         </div>
       </div>
+
+      <nav className={`nav-mobile-panel ${mobileMenuOpen ? "open" : ""}`.trim()} aria-label="Mobile navigation">
+        {NAV_LINKS.map((item) => (
+          <button
+            key={item.path}
+            id={`${item.id}-mobile`}
+            type="button"
+            className={`nav-link nav-link-mobile ${normalizePath(pathname) === item.path ? "active" : ""}`.trim()}
+            onClick={() => handleNavigate(item.path)}
+          >
+            {item.label}
+          </button>
+        ))}
+      </nav>
     </header>
   );
 }
@@ -956,6 +1021,7 @@ function CollectionsPage({ onAddToCart }) {
             <figure className="hero-photo-card hero-photo-card-main" id="starting-photo-main">
               <img
                 src={GIFT_IMAGE_LIBRARY.lineup}
+                {...getResponsiveImageAttrs(GIFT_IMAGE_LIBRARY.lineup, "(max-width: 768px) 96vw, 48vw")}
                 alt="MayAbri floral gift lineup with blue and blush presentation"
                 loading="eager"
                 decoding="async"
@@ -964,6 +1030,7 @@ function CollectionsPage({ onAddToCart }) {
             <figure className="hero-photo-card hero-photo-card-top" id="starting-photo-top">
               <img
                 src={GIFT_IMAGE_LIBRARY.bloomBoxes}
+                {...getResponsiveImageAttrs(GIFT_IMAGE_LIBRARY.bloomBoxes, "(max-width: 768px) 96vw, 34vw")}
                 alt="MayAbri blush bloom and peony serenity gift boxes"
                 loading="lazy"
                 decoding="async"
@@ -972,6 +1039,7 @@ function CollectionsPage({ onAddToCart }) {
             <figure className="hero-photo-card hero-photo-card-bottom" id="starting-photo-bottom">
               <img
                 src={GIFT_IMAGE_LIBRARY.floralCollection}
+                {...getResponsiveImageAttrs(GIFT_IMAGE_LIBRARY.floralCollection, "(max-width: 768px) 96vw, 36vw")}
                 alt="MayAbri artisan floral collection gift set in keepsake box"
                 loading="lazy"
                 decoding="async"
@@ -1038,7 +1106,7 @@ function CollectionsPage({ onAddToCart }) {
               maxScale={1.08}
             >
               <div className="card-media-wrapper">
-                <img src={item.image} alt={item.name} />
+                <img src={item.image} {...getResponsiveImageAttrs(item.image)} alt={item.name} />
                 <div className="card-gradient" />
                 <div className="card-flame" aria-hidden="true">
                   <svg viewBox="0 0 24 24">
@@ -1112,7 +1180,7 @@ function ProductDetailPage({ onAddToCart }) {
 
         <div className="product-hero-grid">
           <TiltCard id="product-main-carousel" className="product-carousel reveal stagger-1" maxTilt={10} maxScale={1.04}>
-            <img src={currentImage} alt="MayAbri signature candle" />
+            <img src={currentImage} {...getResponsiveImageAttrs(currentImage, "(max-width: 768px) 94vw, 52vw")} alt="MayAbri signature candle" />
             <div className="floating-meta">
               <p>Top Notes</p>
               <h4>Neroli • Bergamot • White Tea</h4>
@@ -1271,7 +1339,7 @@ function ProductDetailPage({ onAddToCart }) {
               maxTilt={11}
               maxScale={1.06}
             >
-              <img src={item.image} alt={item.name} />
+              <img src={item.image} {...getResponsiveImageAttrs(item.image)} alt={item.name} />
               <div>
                 <h3>{item.name}</h3>
                 <p>{item.category}</p>
@@ -1316,7 +1384,7 @@ function AboutPage() {
               <p className="emphasis">{block.emphasis}</p>
             </div>
             <div className="narrative-image">
-              <img src={block.image} alt={block.title} />
+              <img src={block.image} {...getResponsiveImageAttrs(block.image, "(max-width: 768px) 94vw, 46vw")} alt={block.title} />
             </div>
           </article>
         ))}
@@ -1359,7 +1427,7 @@ function AboutPage() {
         <div className="team-grid">
           {TEAM.map((member, index) => (
             <TiltCard key={member.id} id={member.id} className={`team-card reveal ${getStaggerClass(index)}`} maxTilt={8} maxScale={1.03}>
-              <img src={member.image} alt={member.name} />
+              <img src={member.image} {...getResponsiveImageAttrs(member.image)} alt={member.name} />
               <h3>{member.name}</h3>
               <p>{member.role}</p>
             </TiltCard>
@@ -1500,7 +1568,7 @@ function CheckoutPage({ onToast, onContinueShopping }) {
                 <div className="cart-list">
                   {CART_ITEMS.map((item, index) => (
                     <article key={item.id} className={`cart-item reveal ${getStaggerClass(index)}`}>
-                      <img src={item.image} alt={item.name} />
+                      <img src={item.image} {...getResponsiveImageAttrs(item.image)} alt={item.name} />
                       <div>
                         <h3>{item.name}</h3>
                         <p>INR {item.price}</p>
@@ -1561,7 +1629,7 @@ function CheckoutPage({ onToast, onContinueShopping }) {
                       maxTilt={10}
                       maxScale={1.04}
                     >
-                      <img src={product.image} alt={product.name} />
+                      <img src={product.image} {...getResponsiveImageAttrs(product.image)} alt={product.name} />
                       <h4>{product.name}</h4>
                       <p>{product.price}</p>
                     </TiltCard>
@@ -1850,6 +1918,7 @@ function GiftGuidePage({ onAddToCart }) {
             <figure className="hero-photo-card hero-photo-card-main" id="gift-hero-main-photo">
               <img
                 src={GIFT_IMAGE_LIBRARY.floralCollection}
+                {...getResponsiveImageAttrs(GIFT_IMAGE_LIBRARY.floralCollection, "(max-width: 768px) 96vw, 48vw")}
                 alt="MayAbri artisan floral gift collection"
                 loading="lazy"
                 decoding="async"
@@ -1858,6 +1927,7 @@ function GiftGuidePage({ onAddToCart }) {
             <figure className="hero-photo-card hero-photo-card-top" id="gift-hero-accent-photo">
               <img
                 src={GIFT_IMAGE_LIBRARY.bloomBoxes}
+                {...getResponsiveImageAttrs(GIFT_IMAGE_LIBRARY.bloomBoxes, "(max-width: 768px) 96vw, 36vw")}
                 alt="MayAbri floral gift boxes ready for gifting"
                 loading="lazy"
                 decoding="async"
@@ -1880,7 +1950,7 @@ function GiftGuidePage({ onAddToCart }) {
               maxTilt={9}
               maxScale={1.04}
             >
-              <img src={photo.image} alt={photo.title} loading="lazy" decoding="async" />
+              <img src={photo.image} {...getResponsiveImageAttrs(photo.image)} alt={photo.title} loading="lazy" decoding="async" />
               <div className="gift-showcase-meta">
                 <h3>{photo.title}</h3>
                 <p>{photo.subtitle}</p>
@@ -1924,7 +1994,7 @@ function GiftGuidePage({ onAddToCart }) {
           {FEATURED_GIFT_SETS.map((set, index) => (
             <TiltCard key={set.id} id={set.id} className={`featured-set-card product-card reveal ${getStaggerClass(index)}`} maxTilt={11} maxScale={1.06}>
               <div className="set-image-frame">
-                <img src={set.images[activeSlides[set.id] || 0]} alt={set.name} />
+                <img src={set.images[activeSlides[set.id] || 0]} {...getResponsiveImageAttrs(set.images[activeSlides[set.id] || 0])} alt={set.name} />
                 <button id={`${set.id}-next-image`} type="button" className="set-next" onClick={() => nextSetImage(set.id)}>
                   Next
                 </button>
